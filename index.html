@@ -713,7 +713,7 @@
                     <input type="text" id="bookNumberInput">
                 </div>
                 <div class="form-group full-width">
-                    <label for="shelfInput">书架（可选）</label>
+                    <label for="shelfInput">书架</label>
                     <input type="text" id="shelfInput">
                 </div>
                 <button class="btn-primary" id="addBtn">添加</button>
@@ -732,12 +732,13 @@
                         <th class="sortable" id="sortBookNumberHead" aria-sort="ascending">
                             书号 <span class="sort-icon" id="sortIcon">▲</span>
                         </th>
+                        <th>书架</th>
                         <th class="col-action">操作</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr class="empty-row">
-                        <td colspan="3">加载中...</td>
+                        <td colspan="4">加载中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -1652,13 +1653,14 @@
             function renderTable() {
                 countDisplay.textContent = books.length;
                 if (books.length === 0) {
-                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="3">图书列表为空，添加一本书吧！</td></tr>';
+                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="4">图书列表为空，添加一本书吧！</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = books.map((item, index) => {
                     const title = escapeHtml(item.title);
                     const bookNumber = escapeHtml(item.bookNumber);
+                    const shelf = escapeHtml(item.shelf);
                     const titleHtml = item.url
                         ? `<a href="${escapeAttribute(item.url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
                         : title;
@@ -1667,6 +1669,7 @@
                         <tr data-index="${index}">
                             <td class="col-title">${titleHtml}</td>
                             <td class="col-number">${bookNumber}</td>
+                            <td>${shelf}</td>
                             <td class="col-action">
                                 <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
                                 <button class="action-btn delete-btn" data-index="${index}" title="删除">删除</button>
