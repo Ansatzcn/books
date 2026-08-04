@@ -676,6 +676,52 @@
             }
         }
     
+
+        /* 回到顶部 */
+        .back-to-top {
+            position: fixed;
+            right: 18px;
+            bottom: 26px;
+            z-index: 900;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.5rem 0.8rem;
+            border: 1px solid rgba(148, 163, 184, 0.55);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.88);
+            color: #64748b;
+            font-family: inherit;
+            font-size: 0.78rem;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+            opacity: 0.58;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+            transition: opacity 0.2s ease, transform 0.2s ease, color 0.15s ease;
+            backdrop-filter: blur(6px);
+        }
+        .back-to-top.at-top {
+            opacity: 0.38;
+        }
+        .back-to-top:hover,
+        .back-to-top:focus-visible {
+            opacity: 1;
+            color: #334155;
+            outline: none;
+        }
+        .back-to-top .back-to-top-icon {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .back-to-top {
+                transition: none;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -758,6 +804,10 @@
                 <label for="editBookNumberInput">书号</label>
                 <input type="text" id="editBookNumberInput">
             </div>
+            <div class="form-group">
+                <label for="editShelfInput">书架</label>
+                <input type="text" id="editShelfInput">
+            </div>
             <div class="modal-actions">
                 <button class="btn-modal cancel" id="editCancelBtn">取消</button>
                 <button class="btn-modal save" id="editSaveBtn">保存</button>
@@ -798,6 +848,12 @@
             </div>
         </div>
     </div>
+
+
+    <button type="button" class="back-to-top" id="backToTopBtn" aria-label="回到顶部" title="回到顶部">
+        <span class="back-to-top-icon" aria-hidden="true">↑</span>
+        <span>回到顶部</span>
+    </button>
 
     <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
@@ -875,11 +931,13 @@
             const statusDot = document.getElementById('statusDot');
             const statusText = document.getElementById('statusText');
             const configBtn = document.getElementById('configBtn');
+            const backToTopBtn = document.getElementById('backToTopBtn');
 
             const editModal = document.getElementById('editModal');
             const editTitleDisplay = document.getElementById('editTitleDisplay');
             const editTitleInput = document.getElementById('editTitleInput');
             const editBookNumberInput = document.getElementById('editBookNumberInput');
+            const editShelfInput = document.getElementById('editShelfInput');
             const editCancelBtn = document.getElementById('editCancelBtn');
             const editSaveBtn = document.getElementById('editSaveBtn');
 
@@ -1717,6 +1775,7 @@
                 editTitleDisplay.textContent = item.title;
                 editTitleInput.value = formatTitleInput(item);
                 editBookNumberInput.value = item.bookNumber;
+                editShelfInput.value = item.shelf || '';
                 editModal.classList.remove('hidden');
                 setTimeout(() => editTitleInput.focus(), 100);
             }
@@ -1752,7 +1811,7 @@
                     title: parsed.title,
                     url: parsed.url,
                     bookNumber: editBookNumberInput.value.trim(),
-                    shelf: books[editingIndex].shelf || ''
+                    shelf: editShelfInput.value.trim()
                 };
 
                 closeEditModal();
@@ -1979,6 +2038,21 @@
                 if (!configModal.classList.contains('hidden')) closeConfigModal();
             });
 
+
+            // ---------- 回到顶部 ----------
+            function updateBackToTopVisibility() {
+                backToTopBtn.classList.toggle('at-top', window.scrollY <= 20);
+            }
+
+            window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
+            backToTopBtn.addEventListener('click', () => {
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                window.scrollTo({
+                    top: 0,
+                    behavior: reduceMotion ? 'auto' : 'smooth'
+                });
+            });
+
             // ---------- 初始化 ----------
             sortBookNumberHead.setAttribute('tabindex', '0');
             sortBookNumberHead.setAttribute('role', 'button');
@@ -1986,6 +2060,7 @@
             loadSyncMeta();
             loadFromLocal();
             updateLastSyncDisplay();
+            updateBackToTopVisibility();
 
             if (isConfigValid()) {
                 ensureSyncTarget();
