@@ -712,6 +712,10 @@
                     <label for="bookNumberInput">书号</label>
                     <input type="text" id="bookNumberInput">
                 </div>
+                <div class="form-group full-width">
+                    <label for="shelfInput">书架（可选）</label>
+                    <input type="text" id="shelfInput">
+                </div>
                 <button class="btn-primary" id="addBtn">添加</button>
             </div>
         </div>
@@ -856,6 +860,7 @@
             // ---------- DOM 引用 ----------
             const titleInput = document.getElementById('titleInput');
             const bookNumberInput = document.getElementById('bookNumberInput');
+            const shelfInput = document.getElementById('shelfInput');
             const addBtn = document.getElementById('addBtn');
             const tableBody = document.getElementById('tableBody');
             const countDisplay = document.getElementById('countDisplay');
@@ -939,7 +944,8 @@
                     url: typeof item.url === 'string' ? item.url.trim() : '',
                     bookNumber: typeof item.bookNumber === 'string'
                         ? item.bookNumber.trim()
-                        : (typeof item.number === 'string' ? item.number.trim() : '')
+                        : (typeof item.number === 'string' ? item.number.trim() : ''),
+                    shelf: typeof item.shelf === 'string' ? item.shelf.trim() : ''
                 };
             }
 
@@ -1007,10 +1013,11 @@
                     .map(item => ({
                         title: item.title,
                         url: item.url,
-                        bookNumber: item.bookNumber
+                        bookNumber: item.bookNumber,
+                        shelf: item.shelf
                     }))
                     .sort((a, b) => {
-                        for (const field of ['bookNumber', 'title', 'url']) {
+                        for (const field of ['bookNumber', 'title', 'url', 'shelf']) {
                             const compared = fingerprintCollator.compare(a[field], b[field]);
                             if (compared !== 0) return compared;
                         }
@@ -1689,13 +1696,15 @@
                 books.push({
                     title: parsed.title,
                     url: parsed.url,
-                    bookNumber: bookNumberInput.value.trim()
+                    bookNumber: bookNumberInput.value.trim(),
+                    shelf: shelfInput.value.trim()
                 });
 
                 applySortAndRender();
                 markLocalChange();
                 titleInput.value = '';
                 bookNumberInput.value = '';
+                shelfInput.value = '';
                 titleInput.focus();
             }
 
@@ -1739,7 +1748,8 @@
                 books[editingIndex] = {
                     title: parsed.title,
                     url: parsed.url,
-                    bookNumber: editBookNumberInput.value.trim()
+                    bookNumber: editBookNumberInput.value.trim(),
+                    shelf: books[editingIndex].shelf || ''
                 };
 
                 closeEditModal();
