@@ -315,6 +315,9 @@
         .book-table .col-title a:hover {
             text-decoration: underline;
         }
+        .book-table .col-category {
+            min-width: 110px;
+        }
         .book-table .col-number {
             min-width: 160px;
         }
@@ -758,8 +761,19 @@
             <h2>添加</h2>
             <div class="form-grid">
                 <div class="form-group full-width">
-                    <label for="titleInput">标题</label>
+                    <label for="titleInput">字词</label>
                     <input type="text" id="titleInput" autofocus>
+                </div>
+                <div class="form-group full-width">
+                    <label for="categoryInput">分类</label>
+                    <input
+                        type="text"
+                        id="categoryInput"
+                        list="categoryOptions"
+                        autocomplete="off"
+                        placeholder="输入新分类，之后会自动出现在下拉列表中"
+                    >
+                    <datalist id="categoryOptions"></datalist>
                 </div>
                 <div class="form-group full-width">
                     <label for="bookNumberInput">书号</label>
@@ -781,7 +795,8 @@
             <table class="book-table" id="bookTable">
                 <thead>
                     <tr>
-                        <th>标题</th>
+                        <th>字词</th>
+                        <th>分类</th>
                         <th class="sortable" id="sortBookNumberHead" aria-sort="ascending">
                             书号 <span class="sort-icon" id="sortIcon">▲</span>
                         </th>
@@ -791,7 +806,7 @@
                 </thead>
                 <tbody id="tableBody">
                     <tr class="empty-row">
-                        <td colspan="4">加载中...</td>
+                        <td colspan="5">加载中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -802,10 +817,14 @@
     <div class="modal-overlay hidden" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editModalHeading">
         <div class="modal-box">
             <h3 id="editModalHeading">编辑条目</h3>
-            <div class="modal-sub">标题：<span id="editTitleDisplay"></span></div>
+            <div class="modal-sub">字词：<span id="editTitleDisplay"></span></div>
             <div class="form-group">
-                <label for="editTitleInput">标题</label>
+                <label for="editTitleInput">字词</label>
                 <input type="text" id="editTitleInput">
+            </div>
+            <div class="form-group">
+                <label for="editCategoryInput">分类</label>
+                <input type="text" id="editCategoryInput" list="categoryOptions" autocomplete="off">
             </div>
             <div class="form-group">
                 <label for="editBookNumberInput">书号</label>
@@ -824,7 +843,7 @@
 
     <!-- 配置弹窗 -->
     <div class="config-overlay hidden" id="configModal" role="dialog" aria-modal="true" aria-labelledby="configModalHeading">
-        <div class="config-box">
+        <form class="config-box" id="configForm" autocomplete="on">
             <h3 id="configModalHeading">GitHub 云端配置</h3>
             <div class="config-desc">
                 本网页按当前网址路径独立保存本地图书、配置、同步状态和冲突备份，不会读取其他仓库页面的数据。
@@ -841,12 +860,12 @@
         <a href="https://github.com/settings/personal-access-tokens"
            target="_blank"
            rel="noopener noreferrer">创建细粒度 Token</a>
-        （仅授权目标仓库，并授予 <strong>Contents: Read and write</strong>；Token 只在当前浏览器会话中保存）
+        （仅授权目标仓库，并授予 <strong>Contents: Read and write</strong>。网页会在此设备保存 Token；保存配置时如浏览器询问是否保存密码，请选择“保存”，并开启浏览器密码同步，以便在多个设备自动填充。共享设备请勿使用。）
     </div>
 </div>
             <div class="form-group">
                 <label for="cfgOwner">仓库所有者 *</label>
-                <input type="text" id="cfgOwner">
+                <input type="text" id="cfgOwner" name="github-owner" autocomplete="username">
             </div>
             <div class="form-group">
                 <label for="cfgRepo">仓库名称 *</label>
@@ -857,10 +876,10 @@
                 <input type="text" id="cfgFile" value="books_data.json">
             </div>
             <div class="config-actions">
-                <button class="btn-config secondary" id="configCancelBtn">取消</button>
-                <button class="btn-config primary" id="configSaveBtn">保存并连接</button>
+                <button type="button" class="btn-config secondary" id="configCancelBtn">取消</button>
+                <button type="submit" class="btn-config primary" id="configSaveBtn">保存并连接</button>
             </div>
-        </div>
+        </form>
     </div>
 
 
@@ -902,7 +921,9 @@
             const PAGE_INSTANCE_ID = hashIdentity(getPageInstanceIdentity());
             const STORAGE_NAMESPACE = `books_catalog:${PAGE_INSTANCE_ID}`;
             const CONFIG_KEY = `${STORAGE_NAMESPACE}:config`;
-            const TOKEN_KEY = `${STORAGE_NAMESPACE}:token_session`;
+            const TOKEN_KEY = `${STORAGE_NAMESPACE}:token_local`;
+            const LEGACY_TOKEN_SESSION_KEY = `${STORAGE_NAMESPACE}:token_session`;
+            const CATEGORY_OPTIONS_KEY = `${STORAGE_NAMESPACE}:category_options`;
             const STORAGE_KEY = `${STORAGE_NAMESPACE}:books`;
             const SYNC_SCHEMA_VERSION = 1;
             const SYNC_META_KEY = `${STORAGE_NAMESPACE}:sync_meta_v1`;
@@ -912,6 +933,7 @@
             const AUTO_SYNC_DELAY = 700;
 
             let books = [];
+            let categoryValues = [];
             let sortOrder = 'asc';
             let editingIndex = null;
             let isSyncing = false;
@@ -930,6 +952,8 @@
 
             // ---------- DOM 引用 ----------
             const titleInput = document.getElementById('titleInput');
+            const categoryInput = document.getElementById('categoryInput');
+            const categoryDatalist = document.getElementById('categoryOptions');
             const bookNumberInput = document.getElementById('bookNumberInput');
             const shelfInput = document.getElementById('shelfInput');
             const addBtn = document.getElementById('addBtn');
@@ -950,12 +974,14 @@
             const editModal = document.getElementById('editModal');
             const editTitleDisplay = document.getElementById('editTitleDisplay');
             const editTitleInput = document.getElementById('editTitleInput');
+            const editCategoryInput = document.getElementById('editCategoryInput');
             const editBookNumberInput = document.getElementById('editBookNumberInput');
             const editShelfInput = document.getElementById('editShelfInput');
             const editCancelBtn = document.getElementById('editCancelBtn');
             const editSaveBtn = document.getElementById('editSaveBtn');
 
             const configModal = document.getElementById('configModal');
+            const configForm = document.getElementById('configForm');
             const cfgToken = document.getElementById('cfgToken');
             const cfgOwner = document.getElementById('cfgOwner');
             const cfgRepo = document.getElementById('cfgRepo');
@@ -1005,6 +1031,68 @@
                 }
             }
 
+            // ---------- 分类下拉选项 ----------
+            function normalizeCategoryValue(value) {
+                return String(value || '').normalize('NFKC').trim();
+            }
+
+            function renderCategoryOptions() {
+                categoryDatalist.innerHTML = '';
+                categoryValues.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    categoryDatalist.appendChild(option);
+                });
+            }
+
+            function saveCategoryOptions() {
+                safeLocalSet(CATEGORY_OPTIONS_KEY, JSON.stringify(categoryValues));
+            }
+
+            function loadCategoryOptions() {
+                const stored = safeLocalGet(CATEGORY_OPTIONS_KEY);
+                if (!stored) {
+                    categoryValues = [];
+                    renderCategoryOptions();
+                    return;
+                }
+
+                try {
+                    const parsed = JSON.parse(stored);
+                    categoryValues = Array.isArray(parsed)
+                        ? [...new Set(parsed.map(normalizeCategoryValue).filter(Boolean))]
+                        : [];
+                } catch (error) {
+                    categoryValues = [];
+                }
+                categoryValues.sort((a, b) => titleCollator.compare(a, b));
+                renderCategoryOptions();
+            }
+
+            function rememberCategory(value) {
+                const normalized = normalizeCategoryValue(value);
+                if (!normalized || categoryValues.includes(normalized)) return;
+                categoryValues.push(normalized);
+                categoryValues.sort((a, b) => titleCollator.compare(a, b));
+                saveCategoryOptions();
+                renderCategoryOptions();
+            }
+
+            function syncCategoryOptionsFromBooks() {
+                const previousLength = categoryValues.length;
+                books.forEach(item => {
+                    const normalized = normalizeCategoryValue(item.category);
+                    if (normalized && !categoryValues.includes(normalized)) {
+                        categoryValues.push(normalized);
+                    }
+                });
+                if (categoryValues.length !== previousLength) {
+                    categoryValues.sort((a, b) => titleCollator.compare(a, b));
+                    saveCategoryOptions();
+                    renderCategoryOptions();
+                }
+            }
+
             // ---------- 数据规范化 ----------
             function normalizeBookItem(item) {
                 if (!item || typeof item !== 'object') return null;
@@ -1015,6 +1103,9 @@
                 return {
                     title,
                     url: typeof item.url === 'string' ? item.url.trim() : '',
+                    category: typeof item.category === 'string'
+                        ? item.category.trim()
+                        : (typeof item.type === 'string' ? item.type.trim() : ''),
                     bookNumber: typeof item.bookNumber === 'string'
                         ? item.bookNumber.trim()
                         : (typeof item.number === 'string' ? item.number.trim() : ''),
@@ -1065,7 +1156,7 @@
                 }
 
                 if (raw.startsWith('[') || raw.includes('](')) {
-                    throw new Error('标题格式不完整，请使用：[标题](https://网址)');
+                    throw new Error('字词格式不完整，请使用：[字词](https://网址)');
                 }
 
                 return { title: raw, url: '' };
@@ -1086,11 +1177,12 @@
                     .map(item => ({
                         title: item.title,
                         url: item.url,
+                        category: item.category,
                         bookNumber: item.bookNumber,
                         shelf: item.shelf
                     }))
                     .sort((a, b) => {
-                        for (const field of ['bookNumber', 'title', 'url', 'shelf']) {
+                        for (const field of ['bookNumber', 'category', 'title', 'url', 'shelf']) {
                             const compared = fingerprintCollator.compare(a[field], b[field]);
                             if (compared !== 0) return compared;
                         }
@@ -1203,7 +1295,7 @@
                 }
 
                 config = {
-                    token: safeSessionGet(TOKEN_KEY) || '',
+                    token: safeLocalGet(TOKEN_KEY) || safeSessionGet(LEGACY_TOKEN_SESSION_KEY) || '',
                     owner: typeof parsed.owner === 'string' ? parsed.owner : '',
                     repo: typeof parsed.repo === 'string' ? parsed.repo : '',
                     file: typeof parsed.file === 'string' && parsed.file.trim()
@@ -1223,7 +1315,7 @@
                 config.repo = cfgRepo.value.trim();
                 config.file = cfgFile.value.trim() || 'books_data.json';
 
-                safeSessionSet(TOKEN_KEY, config.token);
+                safeLocalSet(TOKEN_KEY, config.token);
                 safeLocalSet(CONFIG_KEY, JSON.stringify({
                     owner: config.owner,
                     repo: config.repo,
@@ -1717,6 +1809,7 @@
             // ---------- 渲染 ----------
             function applySortAndRender() {
                 sortBooks(sortOrder);
+                syncCategoryOptionsFromBooks();
                 renderTable();
                 updateSortIcon();
                 saveToLocal();
@@ -1725,12 +1818,13 @@
             function renderTable() {
                 countDisplay.textContent = books.length;
                 if (books.length === 0) {
-                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="4">图书列表为空，添加一本书吧！</td></tr>';
+                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="5">图书列表为空，添加一本书吧！</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = books.map((item, index) => {
                     const title = escapeHtml(item.title);
+                    const category = escapeHtml(item.category);
                     const bookNumber = escapeHtml(item.bookNumber);
                     const shelf = escapeHtml(item.shelf);
                     const titleHtml = item.url
@@ -1740,6 +1834,7 @@
                     return `
                         <tr data-index="${index}">
                             <td class="col-title">${titleHtml}</td>
+                            <td class="col-category">${category}</td>
                             <td class="col-number">${bookNumber}</td>
                             <td>${shelf}</td>
                             <td class="col-action">
@@ -1763,7 +1858,7 @@
                 }
 
                 if (!parsed) {
-                    alert('请填写“标题”字段。');
+                    alert('请填写“字词”字段。');
                     titleInput.focus();
                     return;
                 }
@@ -1771,6 +1866,7 @@
                 books.push({
                     title: parsed.title,
                     url: parsed.url,
+                    category: normalizeCategoryValue(categoryInput.value),
                     bookNumber: bookNumberInput.value.trim(),
                     shelf: shelfInput.value.trim()
                 });
@@ -1778,6 +1874,7 @@
                 applySortAndRender();
                 markLocalChange();
                 titleInput.value = '';
+                categoryInput.value = '';
                 bookNumberInput.value = '';
                 shelfInput.value = '';
                 titleInput.focus();
@@ -1788,6 +1885,7 @@
                 const item = books[index];
                 editTitleDisplay.textContent = item.title;
                 editTitleInput.value = formatTitleInput(item);
+                editCategoryInput.value = item.category || '';
                 editBookNumberInput.value = item.bookNumber;
                 editShelfInput.value = item.shelf || '';
                 editModal.classList.remove('hidden');
@@ -1816,7 +1914,7 @@
                 }
 
                 if (!parsed) {
-                    alert('请填写“标题”字段。');
+                    alert('请填写“字词”字段。');
                     editTitleInput.focus();
                     return;
                 }
@@ -1824,6 +1922,7 @@
                 books[editingIndex] = {
                     title: parsed.title,
                     url: parsed.url,
+                    category: normalizeCategoryValue(editCategoryInput.value),
                     bookNumber: editBookNumberInput.value.trim(),
                     shelf: editShelfInput.value.trim()
                 };
@@ -1925,7 +2024,30 @@
                 configModal.classList.add('hidden');
             }
 
-            function saveConfigAndConnect() {
+            async function requestBrowserTokenSave(token, owner, repo) {
+                if (
+                    !window.isSecureContext ||
+                    !navigator.credentials ||
+                    typeof window.PasswordCredential !== 'function'
+                ) {
+                    return false;
+                }
+
+                try {
+                    const credential = new PasswordCredential({
+                        id: owner,
+                        password: token,
+                        name: `GitHub Token · ${owner}/${repo}`
+                    });
+                    await navigator.credentials.store(credential);
+                    return true;
+                } catch (error) {
+                    console.info('浏览器未保存 Token 凭据:', error);
+                    return false;
+                }
+            }
+
+            async function saveConfigAndConnect() {
                 const previousTarget = getSyncTarget();
                 const token = cfgToken.value.trim();
                 const owner = cfgOwner.value.trim();
@@ -1950,6 +2072,7 @@
 
                 config = { token, owner, repo, file };
                 saveConfig();
+                const browserSaved = await requestBrowserTokenSave(token, owner, repo);
 
                 if (previousTarget !== getSyncTarget()) {
                     syncMeta = createEmptySyncMeta(getSyncTarget());
@@ -1957,7 +2080,9 @@
                 }
 
                 closeConfigModal();
-                showToast('配置已保存，正在安全同步...', 'info');
+                showToast(browserSaved
+                    ? '配置已保存；浏览器已接收 Token 保存请求，正在同步...'
+                    : '配置已保存在此设备；如浏览器弹出保存密码提示，请选择“保存”。正在同步...', 'info');
                 syncToCloud(true, true);
             }
 
@@ -2009,7 +2134,10 @@
             syncBtn.addEventListener('click', () => syncToCloud(true, true));
             configBtn.addEventListener('click', openConfigModal);
             configCancelBtn.addEventListener('click', closeConfigModal);
-            configSaveBtn.addEventListener('click', saveConfigAndConnect);
+            configForm.addEventListener('submit', event => {
+                event.preventDefault();
+                saveConfigAndConnect();
+            });
             exportBtn.addEventListener('click', exportData);
             importBtn.addEventListener('click', () => fileInput.click());
 
@@ -2026,7 +2154,7 @@
                 input.addEventListener('keydown', event => {
                     if (event.key === 'Enter') {
                         event.preventDefault();
-                        saveConfigAndConnect();
+                        configForm.requestSubmit();
                     }
                 });
             });
@@ -2072,6 +2200,7 @@
             sortBookNumberHead.setAttribute('role', 'button');
             loadConfig();
             loadSyncMeta();
+            loadCategoryOptions();
             loadFromLocal();
             updateLastSyncDisplay();
             updateBackToTopVisibility();
