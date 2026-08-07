@@ -277,19 +277,6 @@
             border-bottom: 2px solid #d1d9e6;
             white-space: nowrap;
         }
-        .book-table th.sortable {
-            cursor: pointer;
-            user-select: none;
-            transition: background 0.15s;
-        }
-        .book-table th.sortable:hover {
-            background: #e2e8f0;
-        }
-        .book-table th.sortable .sort-icon {
-            margin-left: 6px;
-            font-size: 0.75rem;
-            color: #94a3b8;
-        }
         .book-table td {
             padding: 0.8rem 1.2rem;
             border-bottom: 1px solid #eef2f6;
@@ -317,9 +304,6 @@
         }
         .book-table .col-category {
             min-width: 110px;
-        }
-        .book-table .col-number {
-            min-width: 160px;
         }
         .book-table .col-action {
             text-align: center;
@@ -981,10 +965,6 @@
                         <div class="category-menu" id="categoryDropdown" role="listbox"></div>
                     </div>
                 </div>
-                <div class="form-group full-width">
-                    <label for="bookNumberInput">书号</label>
-                    <input type="text" id="bookNumberInput">
-                </div>
                 <button class="btn-primary" id="addBtn">添加</button>
             </div>
         </div>
@@ -999,15 +979,12 @@
                     <tr>
                         <th>字词</th>
                         <th>分类</th>
-                        <th class="sortable" id="sortBookNumberHead" aria-sort="ascending">
-                            书号 <span class="sort-icon" id="sortIcon">▲</span>
-                        </th>
                         <th class="col-action">操作</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr class="empty-row">
-                        <td colspan="4">加载中...</td>
+                        <td colspan="3">加载中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -1038,10 +1015,6 @@
                     <button type="button" class="category-toggle" id="editCategoryToggle" aria-label="展开分类选项" title="展开分类选项">▼</button>
                     <div class="category-menu" id="editCategoryDropdown" role="listbox"></div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="editBookNumberInput">书号</label>
-                <input type="text" id="editBookNumberInput">
             </div>
             <div class="modal-actions">
                 <button class="btn-modal cancel" id="editCancelBtn">取消</button>
@@ -1167,7 +1140,6 @@
             let books = [];
             let categoryValues = [];
             let excludedCategoryKeys = new Set();
-            let sortOrder = 'asc';
             let editingIndex = null;
             let isSyncing = false;
             let syncQueued = false;
@@ -1189,15 +1161,12 @@
             const categoryInput = document.getElementById('categoryInput');
             const categoryToggle = document.getElementById('categoryToggle');
             const categoryDropdown = document.getElementById('categoryDropdown');
-            const bookNumberInput = document.getElementById('bookNumberInput');
             const addBtn = document.getElementById('addBtn');
             const tableBody = document.getElementById('tableBody');
             const countDisplay = document.getElementById('countDisplay');
             const exportBtn = document.getElementById('exportBtn');
             const importBtn = document.getElementById('importBtn');
             const fileInput = document.getElementById('fileInput');
-            const sortBookNumberHead = document.getElementById('sortBookNumberHead');
-            const sortIcon = document.getElementById('sortIcon');
             const syncBtn = document.getElementById('syncBtn');
             const lastSyncTime = document.getElementById('lastSyncTime');
             const statusDot = document.getElementById('statusDot');
@@ -1212,7 +1181,6 @@
             const editCategoryInput = document.getElementById('editCategoryInput');
             const editCategoryToggle = document.getElementById('editCategoryToggle');
             const editCategoryDropdown = document.getElementById('editCategoryDropdown');
-            const editBookNumberInput = document.getElementById('editBookNumberInput');
             const editCancelBtn = document.getElementById('editCancelBtn');
             const editSaveBtn = document.getElementById('editSaveBtn');
 
@@ -1494,10 +1462,7 @@
                     url: typeof item.url === 'string' ? item.url.trim() : '',
                     category: typeof item.category === 'string'
                         ? item.category.trim()
-                        : (typeof item.type === 'string' ? item.type.trim() : ''),
-                    bookNumber: typeof item.bookNumber === 'string'
-                        ? item.bookNumber.trim()
-                        : (typeof item.number === 'string' ? item.number.trim() : '')
+                        : (typeof item.type === 'string' ? item.type.trim() : '')
                 };
             }
 
@@ -1506,9 +1471,6 @@
                 return value.map(normalizeBookItem).filter(Boolean);
             }
 
-            function normalizeBookNumber(value) {
-                return String(value || '').normalize('NFKC').trim();
-            }
 
             function normalizeTitle(value) {
                 return String(value || '').normalize('NFKC').trim();
@@ -1565,11 +1527,10 @@
                     .map(item => ({
                         title: item.title,
                         url: item.url,
-                        category: item.category,
-                        bookNumber: item.bookNumber
+                        category: item.category
                     }))
                     .sort((a, b) => {
-                        for (const field of ['bookNumber', 'category', 'title', 'url']) {
+                        for (const field of ['category', 'title', 'url']) {
                             const compared = fingerprintCollator.compare(a[field], b[field]);
                             if (compared !== 0) return compared;
                         }
@@ -1626,50 +1587,37 @@
             }
 
             // ---------- 排序 ----------
-            const bookNumberCollator = new Intl.Collator('zh-CN', {
-                sensitivity: 'base',
-                numeric: true,
-                ignorePunctuation: false
-            });
-
+            // 列表固定按“字词首字”的汉语拼音升序排列。
+            // 首字拼音相同时，再按完整字词的拼音顺序比较，保证排序稳定。
             const titleCollator = new Intl.Collator('zh-CN-u-co-pinyin', {
+                usage: 'sort',
                 sensitivity: 'base',
                 numeric: true
             });
 
-            function sortBooks(order = sortOrder) {
-                const multiplier = order === 'asc' ? 1 : -1;
-
-                books.sort((a, b) => {
-                    const numberA = normalizeBookNumber(a.bookNumber);
-                    const numberB = normalizeBookNumber(b.bookNumber);
-                    const hasNumberA = numberA.length > 0;
-                    const hasNumberB = numberB.length > 0;
-
-                    // 未填写书号的条目始终排在已填写书号的条目之后。
-                    if (hasNumberA !== hasNumberB) {
-                        return hasNumberA ? -1 : 1;
-                    }
-
-                    if (hasNumberA && hasNumberB) {
-                        const numberCompared = bookNumberCollator.compare(numberA, numberB);
-                        if (numberCompared !== 0) return numberCompared * multiplier;
-                    }
-
-                    const titleCompared = titleCollator.compare(
-                        normalizeTitle(a.title),
-                        normalizeTitle(b.title)
-                    );
-                    if (titleCompared !== 0) return titleCompared * multiplier;
-
-                    return titleCollator.compare(a.url || '', b.url || '') * multiplier;
-                });
+            function getFirstTitleChar(value) {
+                const normalized = normalizeTitle(value);
+                return Array.from(normalized)[0] || '';
             }
 
-            function updateSortIcon() {
-                const ascending = sortOrder === 'asc';
-                sortIcon.textContent = ascending ? '▲' : '▼';
-                sortBookNumberHead.setAttribute('aria-sort', ascending ? 'ascending' : 'descending');
+            function sortBooks() {
+                books.sort((a, b) => {
+                    const titleA = normalizeTitle(a?.title);
+                    const titleB = normalizeTitle(b?.title);
+                    const firstA = getFirstTitleChar(titleA);
+                    const firstB = getFirstTitleChar(titleB);
+
+                    let compared = titleCollator.compare(firstA, firstB);
+                    if (compared !== 0) return compared;
+
+                    compared = titleCollator.compare(titleA, titleB);
+                    if (compared !== 0) return compared;
+
+                    compared = titleCollator.compare(a?.category || '', b?.category || '');
+                    if (compared !== 0) return compared;
+
+                    return titleCollator.compare(a?.url || '', b?.url || '');
+                });
             }
 
             // ---------- 配置 ----------
@@ -2217,24 +2165,22 @@
 
             // ---------- 渲染 ----------
             function applySortAndRender() {
-                sortBooks(sortOrder);
+                sortBooks();
                 syncCategoryOptionsFromBooks();
                 renderTable();
-                updateSortIcon();
                 saveToLocal();
             }
 
             function renderTable() {
                 countDisplay.textContent = books.length;
                 if (books.length === 0) {
-                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="4">图书列表为空，添加一本书吧！</td></tr>';
+                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="3">图书列表为空，添加一本书吧！</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = books.map((item, index) => {
                     const title = escapeHtml(item.title);
                     const category = escapeHtml(item.category);
-                    const bookNumber = escapeHtml(item.bookNumber);
                     const titleHtml = item.url
                         ? `<a href="${escapeAttribute(item.url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
                         : title;
@@ -2243,7 +2189,6 @@
                         <tr data-index="${index}">
                             <td class="col-title">${titleHtml}</td>
                             <td class="col-category">${category}</td>
-                            <td class="col-number">${bookNumber}</td>
                             <td class="col-action">
                                 <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
                                 <button class="action-btn delete-btn" data-index="${index}" title="删除">删除</button>
@@ -2274,8 +2219,7 @@
                 books.push({
                     title: parsed.title,
                     url: parsed.url,
-                    category,
-                    bookNumber: bookNumberInput.value.trim()
+                    category
                 });
                 rememberCategory(category);
 
@@ -2283,7 +2227,6 @@
                 markLocalChange();
                 titleInput.value = '';
                 categoryInput.value = '';
-                bookNumberInput.value = '';
                 titleInput.focus();
             }
 
@@ -2293,7 +2236,6 @@
                 editTitleDisplay.textContent = item.title;
                 editTitleInput.value = formatTitleInput(item);
                 editCategoryInput.value = item.category || '';
-                editBookNumberInput.value = item.bookNumber;
                 editModal.classList.remove('hidden');
                 setTimeout(() => editTitleInput.focus(), 100);
             }
@@ -2329,8 +2271,7 @@
                 books[editingIndex] = {
                     title: parsed.title,
                     url: parsed.url,
-                    category,
-                    bookNumber: editBookNumberInput.value.trim()
+                    category
                 };
                 rememberCategory(category);
 
@@ -2648,17 +2589,6 @@
                 }
             });
 
-            sortBookNumberHead.addEventListener('click', () => {
-                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-                applySortAndRender();
-            });
-
-            sortBookNumberHead.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    sortBookNumberHead.click();
-                }
-            });
 
             manageCategoriesBtn.addEventListener('click', openCategoryManager);
             categoryManagerCloseBtn.addEventListener('click', closeCategoryManager);
@@ -2760,8 +2690,6 @@
             });
 
             // ---------- 初始化 ----------
-            sortBookNumberHead.setAttribute('tabindex', '0');
-            sortBookNumberHead.setAttribute('role', 'button');
             loadConfig();
             loadSyncMeta();
             loadCategoryOptions();
