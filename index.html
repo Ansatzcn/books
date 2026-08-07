@@ -689,15 +689,20 @@
         /* 配置弹窗 */
         .config-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
-            height: 100%;
+            height: 100vh;
+            height: 100dvh;
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(6px);
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow-y: auto;
+            padding:
+                max(12px, env(safe-area-inset-top))
+                12px
+                max(12px, env(safe-area-inset-bottom));
             z-index: 1000;
             animation: fadeIn 0.25s ease;
         }
@@ -710,6 +715,12 @@
             padding: 2rem 2rem 1.8rem;
             max-width: 560px;
             width: 94%;
+            max-height: calc(100vh - 24px);
+            max-height: calc(100dvh - 24px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-gutter: stable;
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
             animation: slideUp 0.25s ease;
         }
@@ -760,6 +771,29 @@
         }
         .config-box .form-group .hint a:hover {
             text-decoration: underline;
+        }
+        .config-box .token-save-option {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 9px;
+            color: #475569;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+            line-height: 1.5;
+            cursor: pointer;
+        }
+        .config-box .token-save-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            flex: 0 0 auto;
+            margin: 2px 0 0;
+            padding: 0;
+            accent-color: #2563eb;
+            cursor: pointer;
         }
         .config-actions {
             display: flex;
@@ -820,8 +854,27 @@
             .cloud-status {
                 margin-left: 0;
             }
+            .config-overlay {
+                align-items: flex-start;
+                padding:
+                    max(8px, env(safe-area-inset-top))
+                    8px
+                    max(8px, env(safe-area-inset-bottom));
+            }
             .config-box {
-                padding: 1.5rem;
+                width: 100%;
+                max-height: calc(100vh - 16px);
+                max-height: calc(100dvh - 16px);
+                padding: 1.25rem 1rem 1rem;
+                border-radius: 20px;
+            }
+            .config-actions {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            .config-actions .btn-config {
+                flex: 1 1 0;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
             }
         }
     
@@ -1024,20 +1077,24 @@
                 本网页按当前网址路径独立保存本地图书、配置、同步状态和冲突备份，不会读取其他仓库页面的数据。
             </div>
             <div class="form-group">
-    <label for="cfgToken">GitHub Personal Access Token *</label>
-    <input
-        type="password"
-        id="cfgToken"
-        name="github-token"
-        autocomplete="current-password"
-    >
-    <div class="hint">
-        <a href="https://github.com/settings/personal-access-tokens"
-           target="_blank"
-           rel="noopener noreferrer">创建细粒度 Token</a>
-        （仅授权目标仓库，并授予 <strong>Contents: Read and write</strong>。网页会在此设备保存 Token；保存配置时如浏览器询问是否保存密码，请选择“保存”，并开启浏览器密码同步，以便在多个设备自动填充。共享设备请勿使用。）
-    </div>
-</div>
+                <label for="cfgToken">GitHub Personal Access Token *</label>
+                <input
+                    type="password"
+                    id="cfgToken"
+                    name="github-token"
+                    autocomplete="current-password"
+                >
+                <label class="token-save-option" for="cfgRememberToken">
+                    <input type="checkbox" id="cfgRememberToken" checked>
+                    <span>在本设备保存Token。若浏览器出现“保存密码”提示，请选择保存；开启浏览器密码同步后，其他设备可自动填充。</span>
+                </label>
+                <div class="hint">
+                    <a href="https://github.com/settings/personal-access-tokens"
+                       target="_blank"
+                       rel="noopener noreferrer">创建细粒度 Token</a>
+                    （仅授权目标仓库，并授予 <strong>Contents: Read and write</strong>。共享设备建议不要勾选“在本设备保存Token”。）
+                </div>
+            </div>
             <div class="form-group">
                 <label for="cfgOwner">仓库所有者 *</label>
                 <input type="text" id="cfgOwner" name="github-owner" autocomplete="username">
@@ -1119,6 +1176,7 @@
 
             let config = {
                 token: '',
+                rememberToken: true,
                 owner: '',
                 repo: '',
                 file: 'books_data.json'
@@ -1166,6 +1224,7 @@
             const configModal = document.getElementById('configModal');
             const configForm = document.getElementById('configForm');
             const cfgToken = document.getElementById('cfgToken');
+            const cfgRememberToken = document.getElementById('cfgRememberToken');
             const cfgOwner = document.getElementById('cfgOwner');
             const cfgRepo = document.getElementById('cfgRepo');
             const cfgFile = document.getElementById('cfgFile');
@@ -1196,6 +1255,16 @@
                 }
             }
 
+            function safeLocalRemove(key) {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch (error) {
+                    console.error('删除本地存储失败:', error);
+                    return false;
+                }
+            }
+
             function safeSessionGet(key) {
                 try {
                     return sessionStorage.getItem(key);
@@ -1210,6 +1279,16 @@
                     return true;
                 } catch (error) {
                     showToast(`Token 临时保存失败：${error.message}`, 'error');
+                    return false;
+                }
+            }
+
+            function safeSessionRemove(key) {
+                try {
+                    sessionStorage.removeItem(key);
+                    return true;
+                } catch (error) {
+                    console.error('删除会话存储失败:', error);
                     return false;
                 }
             }
@@ -1605,8 +1684,17 @@
                     }
                 }
 
+                const storedLocalToken = safeLocalGet(TOKEN_KEY) || '';
+                const storedSessionToken = safeSessionGet(LEGACY_TOKEN_SESSION_KEY) || '';
+                const rememberToken = typeof parsed.rememberToken === 'boolean'
+                    ? parsed.rememberToken
+                    : Boolean(storedLocalToken);
+
                 config = {
-                    token: safeLocalGet(TOKEN_KEY) || safeSessionGet(LEGACY_TOKEN_SESSION_KEY) || '',
+                    token: rememberToken
+                        ? (storedLocalToken || storedSessionToken)
+                        : (storedSessionToken || ''),
+                    rememberToken,
                     owner: typeof parsed.owner === 'string' ? parsed.owner : '',
                     repo: typeof parsed.repo === 'string' ? parsed.repo : '',
                     file: typeof parsed.file === 'string' && parsed.file.trim()
@@ -1615,6 +1703,7 @@
                 };
 
                 cfgToken.value = config.token;
+                cfgRememberToken.checked = config.rememberToken;
                 cfgOwner.value = config.owner;
                 cfgRepo.value = config.repo;
                 cfgFile.value = config.file;
@@ -1622,12 +1711,21 @@
 
             function saveConfig() {
                 config.token = cfgToken.value.trim();
+                config.rememberToken = cfgRememberToken.checked;
                 config.owner = cfgOwner.value.trim();
                 config.repo = cfgRepo.value.trim();
                 config.file = cfgFile.value.trim() || 'books_data.json';
 
-                safeLocalSet(TOKEN_KEY, config.token);
+                if (config.rememberToken) {
+                    safeLocalSet(TOKEN_KEY, config.token);
+                    safeSessionRemove(LEGACY_TOKEN_SESSION_KEY);
+                } else {
+                    safeLocalRemove(TOKEN_KEY);
+                    safeSessionSet(LEGACY_TOKEN_SESSION_KEY, config.token);
+                }
+
                 safeLocalSet(CONFIG_KEY, JSON.stringify({
+                    rememberToken: config.rememberToken,
                     owner: config.owner,
                     repo: config.repo,
                     file: config.file
@@ -2428,6 +2526,7 @@
 
             function openConfigModal() {
                 cfgToken.value = config.token;
+                cfgRememberToken.checked = config.rememberToken;
                 cfgOwner.value = config.owner;
                 cfgRepo.value = config.repo;
                 cfgFile.value = config.file;
@@ -2485,9 +2584,17 @@
                     return;
                 }
 
-                config = { token, owner, repo, file };
+                config = {
+                    token,
+                    rememberToken: cfgRememberToken.checked,
+                    owner,
+                    repo,
+                    file
+                };
                 saveConfig();
-                const browserSaved = await requestBrowserTokenSave(token, owner, repo);
+                const browserSaved = config.rememberToken
+                    ? await requestBrowserTokenSave(token, owner, repo)
+                    : false;
 
                 if (previousTarget !== getSyncTarget()) {
                     syncMeta = createEmptySyncMeta(getSyncTarget());
@@ -2495,9 +2602,14 @@
                 }
 
                 closeConfigModal();
-                showToast(browserSaved
-                    ? '配置已保存；浏览器已接收 Token 保存请求，正在同步...'
-                    : '配置已保存在此设备；如浏览器弹出保存密码提示，请选择“保存”。正在同步...', 'info');
+                showToast(
+                    config.rememberToken
+                        ? (browserSaved
+                            ? '配置已保存；浏览器已接收 Token 保存请求，正在同步...'
+                            : '配置已保存到本设备；如浏览器弹出保存密码提示，请选择“保存”。正在同步...')
+                        : '配置已保存；Token 仅在当前浏览器会话中保留。正在同步...',
+                    'info'
+                );
                 syncToCloud(true, true);
             }
 
