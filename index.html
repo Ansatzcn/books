@@ -618,6 +618,13 @@
         .modal-actions .btn-modal.save:hover {
             background: #0f172a;
         }
+        .modal-actions .btn-modal.delete {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .modal-actions .btn-modal.delete:hover {
+            background: #fecaca;
+        }
 
 
         @keyframes fadeIn {
@@ -970,7 +977,7 @@
         </div>
 
         <div class="book-list-header">
-            <h2>书目</h2>
+            <h2>总表</h2>
             <span class="badge" id="countDisplay">0</span>
         </div>
         <div class="table-wrapper">
@@ -1017,8 +1024,9 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="btn-modal cancel" id="editCancelBtn">取消</button>
-                <button class="btn-modal save" id="editSaveBtn">保存</button>
+                <button class="btn-modal delete" id="editDeleteBtn" type="button">删除</button>
+                <button class="btn-modal cancel" id="editCancelBtn" type="button">取消</button>
+                <button class="btn-modal save" id="editSaveBtn" type="button">保存</button>
             </div>
         </div>
     </div>
@@ -1181,6 +1189,7 @@
             const editCategoryInput = document.getElementById('editCategoryInput');
             const editCategoryToggle = document.getElementById('editCategoryToggle');
             const editCategoryDropdown = document.getElementById('editCategoryDropdown');
+            const editDeleteBtn = document.getElementById('editDeleteBtn');
             const editCancelBtn = document.getElementById('editCancelBtn');
             const editSaveBtn = document.getElementById('editSaveBtn');
 
@@ -2191,7 +2200,6 @@
                             <td class="col-category">${category}</td>
                             <td class="col-action">
                                 <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
-                                <button class="action-btn delete-btn" data-index="${index}" title="删除">删除</button>
                             </td>
                         </tr>
                     `;
@@ -2275,6 +2283,22 @@
                 };
                 rememberCategory(category);
 
+                closeEditModal();
+                applySortAndRender();
+                markLocalChange();
+            }
+
+            function deleteEditingBook() {
+                if (!Number.isInteger(editingIndex) || editingIndex < 0 || editingIndex >= books.length) {
+                    alert('删除出错，请重试。');
+                    closeEditModal();
+                    return;
+                }
+
+                const item = books[editingIndex];
+                if (!confirm(`确定要删除“${item.title}”吗？`)) return;
+
+                books.splice(editingIndex, 1);
                 closeEditModal();
                 applySortAndRender();
                 markLocalChange();
@@ -2570,23 +2594,12 @@
 
             tableBody.addEventListener('click', event => {
                 const editButton = event.target.closest('.edit-btn');
-                const deleteButton = event.target.closest('.delete-btn');
-                const button = editButton || deleteButton;
-                if (!button) return;
+                if (!editButton) return;
 
-                const index = Number.parseInt(button.dataset.index, 10);
+                const index = Number.parseInt(editButton.dataset.index, 10);
                 if (!Number.isInteger(index) || index < 0 || index >= books.length) return;
 
-                if (editButton) {
-                    openEditModal(index);
-                    return;
-                }
-
-                if (confirm(`确定要删除“${books[index].title}”吗？`)) {
-                    books.splice(index, 1);
-                    applySortAndRender();
-                    markLocalChange();
-                }
+                openEditModal(index);
             });
 
 
@@ -2651,6 +2664,7 @@
                 });
             });
 
+            editDeleteBtn.addEventListener('click', deleteEditingBook);
             editCancelBtn.addEventListener('click', closeEditModal);
             editSaveBtn.addEventListener('click', saveEdit);
             editModal.addEventListener('click', event => {
