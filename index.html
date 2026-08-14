@@ -418,20 +418,57 @@
             display: block;
         }
         .category-option {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
             width: 100%;
-            padding: 0.62rem 0.8rem;
-            border: none;
-            border-radius: 10px;
-            background: transparent;
+            margin: 4px 0;
+            padding: 0.48rem 0.5rem 0.48rem 0.8rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
             color: #1e293b;
             text-align: left;
             font: inherit;
             cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
         }
         .category-option:hover,
         .category-option:focus-visible {
             background: #eef4ff;
+            border-color: #bfdbfe;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+        }
+        .category-option-label {
+            min-width: 0;
+            flex: 1 1 auto;
+            overflow-wrap: anywhere;
+        }
+        .category-option-delete {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 27px;
+            height: 27px;
+            padding: 0;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            background: #fff;
+            color: #b91c1c;
+            font: inherit;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .category-option-delete:hover,
+        .category-option-delete:focus-visible {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #991b1b;
             outline: none;
         }
         .category-menu-empty {
@@ -1315,7 +1352,15 @@
                     return;
                 }
                 menu.innerHTML = values.map(value => `
-                    <button type="button" class="category-option" role="option" data-value="${escapeAttribute(value)}">${escapeHtml(value)}</button>
+                    <div class="category-option" role="option" tabindex="0" data-value="${escapeAttribute(value)}">
+                        <span class="category-option-label">${escapeHtml(value)}</span>
+                        <button
+                            type="button"
+                            class="category-option-delete"
+                            aria-label="从下拉菜单删除 ${escapeAttribute(value)}"
+                            title="删除此选项"
+                        >×</button>
+                    </div>
                 `).join('');
             }
 
@@ -1442,14 +1487,33 @@
                 });
 
                 menu.addEventListener('click', event => {
+                    const deleteButton = event.target.closest('.category-option-delete');
                     const option = event.target.closest('.category-option');
                     if (!option) return;
+
+                    if (deleteButton) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const value = option.dataset.value || '';
+                        const index = categoryValues.findIndex(item => categoryKey(item) === categoryKey(value));
+                        if (index >= 0) deleteCategoryOption(index);
+                        return;
+                    }
+
                     input.value = option.dataset.value || '';
                     closeCategoryMenus();
                     input.focus();
                 });
 
                 menu.addEventListener('keydown', event => {
+                    if (event.target.matches('.category-option-delete')) {
+                        if (event.key === 'Escape') {
+                            event.preventDefault();
+                            closeCategoryMenus();
+                            input.focus();
+                        }
+                        return;
+                    }
                     if (!event.target.matches('.category-option')) return;
                     const options = [...menu.querySelectorAll('.category-option')];
                     const index = options.indexOf(event.target);
@@ -1459,6 +1523,11 @@
                     } else if (event.key === 'ArrowUp') {
                         event.preventDefault();
                         options[(index - 1 + options.length) % options.length]?.focus();
+                    } else if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        input.value = event.target.dataset.value || '';
+                        closeCategoryMenus();
+                        input.focus();
                     } else if (event.key === 'Escape') {
                         closeCategoryMenus();
                         input.focus();
