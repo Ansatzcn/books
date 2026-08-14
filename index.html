@@ -593,7 +593,13 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+            align-items: center;
             margin-top: 1.2rem;
+        }
+
+        /* 编辑弹窗：删除固定左下角，与右下角保存形成左右对称 */
+        #editModal .modal-actions .delete {
+            margin-right: auto;
         }
         .modal-actions .btn-modal {
             padding: 0.5rem 1.6rem;
@@ -1149,6 +1155,7 @@
             let categoryValues = [];
             let excludedCategoryKeys = new Set();
             let editingIndex = null;
+            let editInitialState = null;
             let isSyncing = false;
             let syncQueued = false;
             let autoSyncTimer = null;
@@ -2238,12 +2245,30 @@
                 titleInput.focus();
             }
 
+            function getEditCurrentState() {
+                return {
+                    title: editTitleInput.value,
+                    category: editCategoryInput.value
+                };
+            }
+
+            function isEditUnchanged() {
+                if (!editInitialState) return true;
+                const current = getEditCurrentState();
+                return current.title === editInitialState.title &&
+                    current.category === editInitialState.category;
+            }
+
             function openEditModal(index) {
                 editingIndex = index;
                 const item = books[index];
                 editTitleDisplay.textContent = item.title;
                 editTitleInput.value = formatTitleInput(item);
                 editCategoryInput.value = item.category || '';
+
+                // 记录打开编辑框时的原始内容；修改后再恢复原值，也视为“未修改”。
+                editInitialState = getEditCurrentState();
+
                 editModal.classList.remove('hidden');
                 setTimeout(() => editTitleInput.focus(), 100);
             }
@@ -2251,6 +2276,8 @@
             function closeEditModal() {
                 editModal.classList.add('hidden');
                 editingIndex = null;
+                editInitialState = null;
+                closeCategoryMenus();
             }
 
             function saveEdit() {
@@ -2668,7 +2695,10 @@
             editCancelBtn.addEventListener('click', closeEditModal);
             editSaveBtn.addEventListener('click', saveEdit);
             editModal.addEventListener('click', event => {
-                if (event.target === editModal) closeEditModal();
+                // 只有点击编辑框外的遮罩，并且编辑内容未发生变化时才关闭。
+                if (event.target === editModal && isEditUnchanged()) {
+                    closeEditModal();
+                }
             });
 
             editModal.querySelectorAll('input').forEach(input => {
