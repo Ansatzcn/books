@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Books</title>
     <style>
         * {
@@ -18,6 +18,11 @@
             align-items: flex-start;
             min-height: 100vh;
             padding: 2rem 1rem;
+        }
+
+        body.config-open {
+            overflow: hidden;
+            overscroll-behavior: none;
         }
         .container {
             max-width: 1100px;
@@ -728,7 +733,7 @@
             display: none;
         }
 
-        /* 配置弹窗 */
+        /* 配置弹窗：中间内容独立滚动，底部操作栏固定可见 */
         .config-overlay {
             position: fixed;
             inset: 0;
@@ -740,7 +745,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow-y: auto;
+            overflow: hidden;
             padding:
                 max(12px, env(safe-area-inset-top))
                 12px
@@ -754,17 +759,35 @@
         .config-box {
             background: white;
             border-radius: 28px;
-            padding: 2rem 2rem 1.8rem;
             max-width: 560px;
             width: 94%;
+            height: min(760px, calc(100dvh - 24px));
             max-height: calc(100vh - 24px);
             max-height: calc(100dvh - 24px);
-            overflow-y: auto;
+            display: grid;
+            grid-template-rows: minmax(0, 1fr) auto;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.25s ease;
+        }
+        .config-scroll {
+            min-height: 0;
+            overflow-y: scroll;
+            overflow-x: hidden;
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
             scrollbar-gutter: stable;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.25s ease;
+            scrollbar-width: auto;
+            scrollbar-color: #94a3b8 #eef2f6;
+            padding: 2rem 2rem 1rem;
+            touch-action: pan-y;
+        }
+        .config-scroll::-webkit-scrollbar { width: 10px; }
+        .config-scroll::-webkit-scrollbar-track { background: #eef2f6; }
+        .config-scroll::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border: 2px solid #eef2f6;
+            border-radius: 999px;
         }
         .config-box h3 {
             font-size: 1.3rem;
@@ -779,9 +802,7 @@
             border-bottom: 1px solid #e9edf4;
             padding-bottom: 0.8rem;
         }
-        .config-box .form-group {
-            margin-bottom: 1rem;
-        }
+        .config-box .form-group { margin-bottom: 1rem; }
         .config-box .form-group label {
             font-size: 0.75rem;
             font-weight: 600;
@@ -811,9 +832,7 @@
             color: #2563eb;
             text-decoration: none;
         }
-        .config-box .form-group .hint a:hover {
-            text-decoration: underline;
-        }
+        .config-box .form-group .hint a:hover { text-decoration: underline; }
         .config-box .token-save-option {
             display: flex;
             flex-direction: row;
@@ -838,10 +857,15 @@
             cursor: pointer;
         }
         .config-actions {
+            flex: 0 0 auto;
             display: flex;
             gap: 10px;
             justify-content: flex-end;
-            margin-top: 1.2rem;
+            margin: 0;
+            padding: 0.95rem 2rem max(0.95rem, env(safe-area-inset-bottom));
+            border-top: 1px solid #e9edf4;
+            background: #fff;
+            box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.06);
         }
         .config-actions .btn-config {
             padding: 0.5rem 1.8rem;
@@ -852,20 +876,10 @@
             cursor: pointer;
             transition: 0.15s;
         }
-        .config-actions .btn-config.primary {
-            background: #1e293b;
-            color: white;
-        }
-        .config-actions .btn-config.primary:hover {
-            background: #0f172a;
-        }
-        .config-actions .btn-config.secondary {
-            background: #f1f5f9;
-            color: #334155;
-        }
-        .config-actions .btn-config.secondary:hover {
-            background: #e2e8f0;
-        }
+        .config-actions .btn-config.primary { background: #1e293b; color: white; }
+        .config-actions .btn-config.primary:hover { background: #0f172a; }
+        .config-actions .btn-config.secondary { background: #f1f5f9; color: #334155; }
+        .config-actions .btn-config.secondary:hover { background: #e2e8f0; }
 
         @media (max-width: 700px) {
             .container {
@@ -897,24 +911,35 @@
                 margin-left: 0;
             }
             .config-overlay {
-                align-items: flex-start;
-                padding:
-                    max(8px, env(safe-area-inset-top))
-                    8px
-                    max(8px, env(safe-area-inset-bottom));
+                top: var(--config-visual-top, 0px);
+                bottom: auto;
+                height: var(--config-visual-height, 100dvh);
+                align-items: stretch;
+                padding: 0;
             }
             .config-box {
                 width: 100%;
-                max-height: calc(100vh - 16px);
-                max-height: calc(100dvh - 16px);
-                padding: 1.25rem 1rem 1rem;
-                border-radius: 20px;
+                max-width: none;
+                height: 100%;
+                max-height: none;
+                border-radius: 0;
+            }
+            .config-scroll {
+                padding:
+                    max(1.25rem, env(safe-area-inset-top))
+                    1rem
+                    1rem;
             }
             .config-actions {
-                padding-bottom: env(safe-area-inset-bottom);
+                gap: 8px;
+                padding:
+                    0.85rem
+                    1rem
+                    max(0.85rem, env(safe-area-inset-bottom));
             }
             .config-actions .btn-config {
                 flex: 1 1 0;
+                min-width: 0;
                 padding-left: 0.75rem;
                 padding-right: 0.75rem;
             }
@@ -1104,6 +1129,7 @@
     <!-- 配置弹窗 -->
     <div class="config-overlay hidden" id="configModal" role="dialog" aria-modal="true" aria-labelledby="configModalHeading">
         <form class="config-box" id="configForm" autocomplete="on">
+            <div class="config-scroll" id="configScroll">
             <h3 id="configModalHeading">GitHub 云端配置</h3>
             <div class="config-desc">
                 本网页按当前网址路径独立保存本地图书、配置、同步状态和冲突备份，不会读取其他仓库页面的数据。
@@ -1138,6 +1164,7 @@
             <div class="form-group">
                 <label for="cfgFile">数据文件名</label>
                 <input type="text" id="cfgFile" value="books_data.json">
+            </div>
             </div>
             <div class="config-actions">
                 <button type="button" class="btn-config secondary" id="configCancelBtn">取消</button>
@@ -1251,6 +1278,7 @@
 
             const configModal = document.getElementById('configModal');
             const configForm = document.getElementById('configForm');
+            const configScroll = document.getElementById('configScroll');
             const cfgToken = document.getElementById('cfgToken');
             const cfgRememberToken = document.getElementById('cfgRememberToken');
             const cfgOwner = document.getElementById('cfgOwner');
@@ -2592,18 +2620,44 @@
                 toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
             }
 
+            function isMobileConfigViewport() {
+                return window.matchMedia('(max-width: 700px)').matches;
+            }
+
+            function updateConfigVisualHeight() {
+                if (!isMobileConfigViewport()) {
+                    document.documentElement.style.removeProperty('--config-visual-height');
+                    document.documentElement.style.removeProperty('--config-visual-top');
+                    return;
+                }
+                const viewport = window.visualViewport;
+                const viewportHeight = viewport?.height || window.innerHeight || 0;
+                const viewportTop = viewport?.offsetTop || 0;
+                const height = Math.max(320, Math.round(viewportHeight));
+                document.documentElement.style.setProperty('--config-visual-height', `${height}px`);
+                document.documentElement.style.setProperty('--config-visual-top', `${Math.round(viewportTop)}px`);
+            }
+
             function openConfigModal() {
                 cfgToken.value = config.token;
                 cfgRememberToken.checked = config.rememberToken;
                 cfgOwner.value = config.owner;
                 cfgRepo.value = config.repo;
                 cfgFile.value = config.file;
+                updateConfigVisualHeight();
+                configScroll.scrollTop = 0;
                 configModal.classList.remove('hidden');
-                setTimeout(() => cfgToken.focus(), 100);
+                document.body.classList.add('config-open');
+                if (!isMobileConfigViewport()) {
+                    setTimeout(() => cfgToken.focus({ preventScroll: true }), 100);
+                }
             }
 
             function closeConfigModal() {
                 configModal.classList.add('hidden');
+                document.body.classList.remove('config-open');
+                document.documentElement.style.removeProperty('--config-visual-height');
+                document.documentElement.style.removeProperty('--config-visual-top');
             }
 
             async function requestBrowserTokenSave(token, owner, repo) {
@@ -2745,6 +2799,17 @@
             configForm.addEventListener('submit', event => {
                 event.preventDefault();
                 saveConfigAndConnect();
+            });
+            window.visualViewport?.addEventListener('resize', () => {
+                if (!configModal.classList.contains('hidden')) updateConfigVisualHeight();
+            });
+            window.visualViewport?.addEventListener('scroll', () => {
+                if (!configModal.classList.contains('hidden')) updateConfigVisualHeight();
+            });
+            window.addEventListener('orientationchange', () => {
+                if (!configModal.classList.contains('hidden')) {
+                    setTimeout(updateConfigVisualHeight, 50);
+                }
             });
             exportBtn.addEventListener('click', exportData);
             importBtn.addEventListener('click', () => fileInput.click());
