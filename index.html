@@ -323,12 +323,20 @@
             margin: 0 2px;
         }
         .book-table .action-btn.edit-btn {
-            color: #1e3a8a;
-            background: #dbeafe;
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            color: #94a3b8;
+            font-weight: 400;
+            text-decoration: underline;
+            text-underline-offset: 2px;
         }
-        .book-table .action-btn.edit-btn:hover {
-            background: #bfdbfe;
-            transform: scale(1.05);
+        .book-table .action-btn.edit-btn:hover,
+        .book-table .action-btn.edit-btn:focus-visible {
+            background: transparent;
+            color: #64748b;
+            transform: none;
+            outline: none;
         }
         .book-table .action-btn.delete-btn {
             color: #991b1b;
