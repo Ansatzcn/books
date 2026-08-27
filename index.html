@@ -1306,6 +1306,74 @@
             }
         }
 
+    
+        /* ===== 分类管理移入“添加 > 分类”下拉 ===== */
+        .category-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .category-option-actions {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .category-option-action {
+            min-width: 28px;
+            height: 27px;
+            padding: 0 6px;
+            border: 0;
+            border-radius: 8px;
+            background: #f1f5f9;
+            color: #334155;
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 650;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .category-option-action:hover:not(:disabled),
+        .category-option-action:focus-visible:not(:disabled) {
+            background: #e2e8f0;
+            outline: none;
+        }
+
+        .category-option-up,
+        .category-option-down,
+        .category-option-edit {
+            color: #1E40AF;
+        }
+
+        .category-option-up:hover:not(:disabled),
+        .category-option-down:hover:not(:disabled),
+        .category-option-edit:hover:not(:disabled),
+        .category-option-up:focus-visible:not(:disabled),
+        .category-option-down:focus-visible:not(:disabled),
+        .category-option-edit:focus-visible:not(:disabled) {
+            color: #1E3A8A;
+        }
+
+        .category-option-delete {
+            color: #991b1b;
+            background: #fff1f2;
+        }
+
+        .category-option-delete:hover:not(:disabled),
+        .category-option-delete:focus-visible:not(:disabled) {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        .category-option-action:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
     </style>
 </head>
 <body>
@@ -1322,7 +1390,6 @@
             <div class="left-group">
                 <button class="btn-sync" id="syncBtn">同步</button>
                 <button class="btn-outline" id="configBtn">配置</button>
-                <button class="btn-outline" id="manageCategoriesBtn">管理</button>
                 <button class="btn-outline" id="exportBtn">导出</button>
                 <button class="btn-outline" id="importBtn">导入</button>
                 <input type="file" id="fileInput" accept=".json" style="display: none;">
@@ -1445,25 +1512,6 @@
                 <button class="btn-modal delete" id="editDeleteBtn" type="button">删除</button>
                 <button class="btn-modal cancel" id="editCancelBtn" type="button">取消</button>
                 <button class="btn-modal save" id="editSaveBtn" type="button">保存</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 分类历史选项管理弹窗 -->
-    <div class="modal-overlay hidden" id="categoryManagerModal" role="dialog" aria-modal="true" aria-labelledby="categoryManagerHeading">
-        <div class="modal-box" style="max-width:680px;">
-            <h3 id="categoryManagerHeading">管理</h3>
-            <div class="modal-sub">
-                可修改、删除或手动调整下拉菜单中的分类顺序。修改名称时可同步更新现有条目；删除只移除候选项，不删除已有书目。
-            </div>
-            <label class="checkbox-row">
-                <input type="checkbox" id="updateEntriesOnCategoryRename" checked>
-                <span>修改分类名称时，同步更新所有使用该分类的条目</span>
-            </label>
-            <div class="category-manager-list" id="categoryManagerList"></div>
-            <p class="category-manager-note">分类候选项严格按手动顺序排列，可使用上移/下移调整。删除后的分类若再次手动输入，会追加到下拉菜单末尾。</p>
-            <div class="modal-actions">
-                <button class="btn-modal save" id="categoryManagerCloseBtn" type="button">完成</button>
             </div>
         </div>
     </div>
@@ -1606,7 +1654,6 @@
             const statusDot = document.getElementById('statusDot');
             const statusText = document.getElementById('statusText');
             const configBtn = document.getElementById('configBtn');
-            const manageCategoriesBtn = document.getElementById('manageCategoriesBtn');
             const backToTopBtn = document.getElementById('backToTopBtn');
 
             const editModal = document.getElementById('editModal');
@@ -1623,10 +1670,6 @@
             const editCancelBtn = document.getElementById('editCancelBtn');
             const editSaveBtn = document.getElementById('editSaveBtn');
 
-            const categoryManagerModal = document.getElementById('categoryManagerModal');
-            const categoryManagerList = document.getElementById('categoryManagerList');
-            const updateEntriesOnCategoryRename = document.getElementById('updateEntriesOnCategoryRename');
-            const categoryManagerCloseBtn = document.getElementById('categoryManagerCloseBtn');
 
             const configModal = document.getElementById('configModal');
             const configForm = document.getElementById('configForm');
@@ -1738,17 +1781,30 @@
                     menu.innerHTML = '<div class="category-menu-empty">暂无可选分类，可直接输入新分类</div>';
                     return;
                 }
-                menu.innerHTML = values.map(value => `
-                    <div class="category-option" role="option" tabindex="0" data-value="${escapeAttribute(value)}">
-                        <span class="category-option-label">${escapeHtml(value)}</span>
-                        <button
-                            type="button"
-                            class="category-option-delete"
-                            aria-label="从下拉菜单删除 ${escapeAttribute(value)}"
-                            title="删除此选项"
-                        >×</button>
-                    </div>
-                `).join('');
+
+                const canManage = input === categoryInput && menu === categoryDropdown;
+
+                menu.innerHTML = values.map(value => {
+                    const valueIndex = categoryValues.findIndex(
+                        item => categoryKey(item) === categoryKey(value)
+                    );
+
+                    const actions = canManage
+                        ? `<span class="category-option-actions">
+                            <button type="button" class="category-option-action category-option-up" data-action="up" title="上移" ${valueIndex <= 0 ? 'disabled' : ''}>上</button>
+                            <button type="button" class="category-option-action category-option-down" data-action="down" title="下移" ${valueIndex < 0 || valueIndex >= categoryValues.length - 1 ? 'disabled' : ''}>下</button>
+                            <button type="button" class="category-option-action category-option-edit" data-action="rename" title="修改">改</button>
+                            <button type="button" class="category-option-action category-option-delete" data-action="delete" title="删除">删</button>
+                        </span>`
+                        : '';
+
+                    return `
+                        <div class="category-option" role="option" tabindex="0" data-value="${escapeAttribute(value)}">
+                            <span class="category-option-label">${escapeHtml(value)}</span>
+                            ${actions}
+                        </div>
+                    `;
+                }).join('');
             }
 
             function renderCategoryOptions() {
@@ -2117,16 +2173,30 @@
                 });
 
                 menu.addEventListener('click', event => {
-                    const deleteButton = event.target.closest('.category-option-delete');
+                    const actionButton = event.target.closest('.category-option-action');
                     const option = event.target.closest('.category-option');
                     if (!option) return;
 
-                    if (deleteButton) {
+                    if (actionButton) {
                         event.preventDefault();
                         event.stopPropagation();
+
                         const value = option.dataset.value || '';
-                        const index = categoryValues.findIndex(item => categoryKey(item) === categoryKey(value));
-                        if (index >= 0) deleteCategoryOption(index);
+                        const index = categoryValues.findIndex(
+                            item => categoryKey(item) === categoryKey(value)
+                        );
+                        if (index < 0) return;
+
+                        const action = actionButton.dataset.action || '';
+                        if (action === 'up') {
+                            moveCategoryOption(index, -1);
+                        } else if (action === 'down') {
+                            moveCategoryOption(index, 1);
+                        } else if (action === 'rename') {
+                            renameCategoryFromMenu(index);
+                        } else if (action === 'delete') {
+                            deleteCategoryOption(index);
+                        }
                         return;
                     }
 
@@ -2136,17 +2206,22 @@
                 });
 
                 menu.addEventListener('keydown', event => {
-                    if (event.target.matches('.category-option-delete')) {
-                        if (event.key === 'Escape') {
+                    if (event.target.matches('.category-option-action')) {
+                        if ((event.key === 'Enter' || event.key === ' ') && !event.target.disabled) {
+                            event.preventDefault();
+                            event.target.click();
+                        } else if (event.key === 'Escape') {
                             event.preventDefault();
                             closeCategoryMenus();
                             input.focus();
                         }
                         return;
                     }
+
                     if (!event.target.matches('.category-option')) return;
                     const options = [...menu.querySelectorAll('.category-option')];
                     const index = options.indexOf(event.target);
+
                     if (event.key === 'ArrowDown') {
                         event.preventDefault();
                         options[(index + 1) % options.length]?.focus();
@@ -3077,30 +3152,7 @@
                 markLocalChange();
             }
 
-            // ---------- 分类历史选项管理 ----------
-            function renderCategoryManager() {
-                categoryValues = uniqueCategoryValues(categoryValues);
-                if (categoryValues.length === 0) {
-                    categoryManagerList.innerHTML = '<div class="category-manager-empty">暂无历史分类选项。</div>';
-                    return;
-                }
-
-                categoryManagerList.innerHTML = categoryValues.map((category, index) => `
-                    <div class="category-manager-row" data-index="${index}">
-                        <input
-                            type="text"
-                            class="category-manager-input"
-                            value="${escapeAttribute(category)}"
-                            aria-label="修改分类 ${escapeAttribute(category)}"
-                        >
-                        <button type="button" class="action-btn edit-btn category-save-btn" data-index="${index}">保存</button>
-                        <button type="button" class="action-btn category-move-btn category-up-btn" data-index="${index}" ${index === 0 ? 'disabled' : ''}>上移</button>
-                        <button type="button" class="action-btn category-move-btn category-down-btn" data-index="${index}" ${index === categoryValues.length - 1 ? 'disabled' : ''}>下移</button>
-                        <button type="button" class="action-btn delete-btn category-delete-btn" data-index="${index}">删除</button>
-                    </div>
-                `).join('');
-            }
-
+            // ---------- 分类下拉内管理 ----------
             function moveCategoryOption(index, direction) {
                 const targetIndex = index + direction;
                 if (
@@ -3116,68 +3168,62 @@
                 categoryValues.splice(targetIndex, 0, moved);
                 saveCategoryOptions();
                 renderCategoryOptions();
-                renderCategoryManager();
                 showToast(`已${direction < 0 ? '上移' : '下移'}“${moved}”`, 'success');
             }
 
-            function openCategoryManager() {
-                closeCategoryMenus();
-                renderCategoryManager();
-                categoryManagerModal.classList.remove('hidden');
-            }
-
-            function closeCategoryManager() {
-                categoryManagerModal.classList.add('hidden');
-            }
-
-            function renameCategory(index, inputElement) {
+            function renameCategoryFromMenu(index) {
                 const oldCategory = categoryValues[index];
                 if (!oldCategory) return;
 
-                const newCategory = normalizeCategoryValue(inputElement?.value);
+                const prompted = prompt('修改分类：', oldCategory);
+                if (prompted === null) return;
+
+                const newCategory = normalizeCategoryValue(prompted);
                 if (!newCategory) {
                     showToast('分类名称不能为空', 'error');
-                    inputElement?.focus();
                     return;
                 }
 
                 const oldKey = categoryKey(oldCategory);
                 const newKey = categoryKey(newCategory);
-                if (oldCategory === newCategory) {
-                    showToast('分类名称未发生变化', 'info');
-                    return;
-                }
 
-                const duplicate = categoryValues.some((value, valueIndex) =>
-                    valueIndex !== index && categoryKey(value) === newKey
+                if (oldKey === newKey && oldCategory === newCategory) return;
+
+                const duplicateIndex = categoryValues.findIndex(
+                    (value, valueIndex) =>
+                        valueIndex !== index && categoryKey(value) === newKey
                 );
+                const duplicate = duplicateIndex >= 0;
+
+                let updatedCount = 0;
+                books = books.map(item => {
+                    if (categoryKey(item.category) !== oldKey) return item;
+                    updatedCount += 1;
+                    return { ...item, category: newCategory };
+                });
+
+                if (categoryKey(categoryInput.value) === oldKey) {
+                    categoryInput.value = newCategory;
+                }
+                if (categoryKey(editCategoryInput.value) === oldKey) {
+                    editCategoryInput.value = newCategory;
+                }
 
                 excludedCategoryKeys.add(oldKey);
                 excludedCategoryKeys.delete(newKey);
+
                 if (duplicate) {
                     categoryValues.splice(index, 1);
                 } else {
                     categoryValues[index] = newCategory;
                 }
+
                 categoryValues = uniqueCategoryValues(categoryValues);
 
-                let updatedCount = 0;
-                if (updateEntriesOnCategoryRename.checked) {
-                    books = books.map(item => {
-                        if (categoryKey(item.category) !== oldKey) return item;
-                        updatedCount += 1;
-                        return { ...item, category: newCategory };
-                    });
-                }
-
                 saveCategoryOptions();
-                if (updatedCount > 0) {
-                    applySortAndRender();
-                    markLocalChange();
-                } else {
-                    renderCategoryOptions();
-                }
-                renderCategoryManager();
+                renderCategoryOptions();
+                applySortAndRender();
+                markLocalChange();
 
                 const action = duplicate ? '已合并为' : '已修改为';
                 showToast(
@@ -3203,7 +3249,6 @@
                 categoryValues = uniqueCategoryValues(categoryValues);
                 saveCategoryOptions();
                 renderCategoryOptions();
-                renderCategoryManager();
                 showToast(`已从候选项删除“${category}”`, 'success');
             }
 
@@ -3428,42 +3473,6 @@
                 openEditModal(index);
             });
 
-
-            manageCategoriesBtn.addEventListener('click', openCategoryManager);
-            categoryManagerCloseBtn.addEventListener('click', closeCategoryManager);
-            categoryManagerModal.addEventListener('click', event => {
-                if (event.target === categoryManagerModal) closeCategoryManager();
-            });
-            categoryManagerList.addEventListener('click', event => {
-                const saveButton = event.target.closest('.category-save-btn');
-                const deleteButton = event.target.closest('.category-delete-btn');
-                const upButton = event.target.closest('.category-up-btn');
-                const downButton = event.target.closest('.category-down-btn');
-                const button = saveButton || deleteButton || upButton || downButton;
-                if (!button) return;
-
-                const index = Number.parseInt(button.dataset.index, 10);
-                if (!Number.isInteger(index) || !categoryValues[index]) return;
-
-                if (saveButton) {
-                    const row = saveButton.closest('.category-manager-row');
-                    renameCategory(index, row?.querySelector('.category-manager-input'));
-                } else if (upButton) {
-                    moveCategoryOption(index, -1);
-                } else if (downButton) {
-                    moveCategoryOption(index, 1);
-                } else {
-                    deleteCategoryOption(index);
-                }
-            });
-            categoryManagerList.addEventListener('keydown', event => {
-                if (event.key !== 'Enter' || !event.target.matches('.category-manager-input')) return;
-                event.preventDefault();
-                const row = event.target.closest('.category-manager-row');
-                const index = Number.parseInt(row?.dataset.index, 10);
-                if (Number.isInteger(index)) renameCategory(index, event.target);
-            });
-
             document.addEventListener('click', event => {
                 if (!event.target.closest('.category-combobox')) closeCategoryMenus();
                 if (!event.target.closest('.dictation-combobox')) closeDictationMenus();
@@ -3533,7 +3542,6 @@
                 closeCategoryMenus();
                 closeDictationMenus();
                 if (!editModal.classList.contains('hidden')) closeEditModal();
-                if (!categoryManagerModal.classList.contains('hidden')) closeCategoryManager();
                 if (!configModal.classList.contains('hidden')) closeConfigModal();
             });
 
