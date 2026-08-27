@@ -143,8 +143,8 @@
             background: #0f172a;
         }
         .toolbar .btn-sync {
-            background: #2563eb;
-            border: 1px solid #2563eb;
+            background: #1E40AF;
+            border: 1px solid #1E40AF;
             padding: 0.4rem 1.2rem;
             border-radius: 40px;
             font-weight: 500;
@@ -154,7 +154,7 @@
             font-size: 0.85rem;
         }
         .toolbar .btn-sync:hover {
-            background: #1d4ed8;
+            background: #1E3A8A;
         }
         .toolbar .btn-sync:disabled {
             opacity: 0.6;
@@ -301,7 +301,7 @@
             min-width: 100px;
         }
         .book-table .col-title a {
-            color: #2563eb;
+            color: #1E40AF;
             text-decoration: none;
         }
         .book-table .col-title a:hover {
@@ -502,7 +502,7 @@
         }
         .category-manager-row {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto auto;
+            grid-template-columns: minmax(0, 1fr) auto auto auto auto;
             gap: 8px;
             align-items: center;
         }
@@ -531,7 +531,7 @@
         }
         .category-manager-row .category-save-btn {
             background: #dbeafe;
-            color: #1e3a8a;
+            color: #1E3A8A;
         }
         .category-manager-row .category-delete-btn {
             background: #fee2e2;
@@ -727,7 +727,7 @@
             background: #dc2626;
         }
         .toast.info {
-            background: #2563eb;
+            background: #1E40AF;
         }
         .toast.hidden {
             display: none;
@@ -829,7 +829,7 @@
             margin-top: 4px;
         }
         .config-box .form-group .hint a {
-            color: #2563eb;
+            color: #1E40AF;
             text-decoration: none;
         }
         .config-box .form-group .hint a:hover { text-decoration: underline; }
@@ -853,7 +853,7 @@
             flex: 0 0 auto;
             margin: 2px 0 0;
             padding: 0;
-            accent-color: #2563eb;
+            accent-color: #1E40AF;
             cursor: pointer;
         }
         .config-actions {
@@ -998,6 +998,314 @@
             }
         }
 
+    
+        /* ===== Books 最终主题 / 单列表 / 听写 / 回顶规则 ===== */
+
+        /* 主色与悬停色 */
+        .toolbar .btn-sync,
+        .btn-primary,
+        .modal-actions .btn-modal.save,
+        .config-actions .btn-config.primary {
+            background: #1E40AF !important;
+            border-color: #1E40AF !important;
+            color: #fff !important;
+        }
+
+        .toolbar .btn-sync:hover,
+        .btn-primary:hover,
+        .modal-actions .btn-modal.save:hover,
+        .config-actions .btn-config.primary:hover {
+            background: #1E3A8A !important;
+            border-color: #1E3A8A !important;
+            color: #fff !important;
+        }
+
+        .config-box .form-group .hint a,
+        .category-manager-row .category-save-btn {
+            color: #1E40AF !important;
+        }
+
+        /* 总表：单列；字词 1.1rem，其它 1rem；所有内容纯黑 */
+        .book-table,
+        .book-table th,
+        .book-table td,
+        .book-table th *,
+        .book-table td *,
+        .book-table .book-meta,
+        .book-table .edit-btn,
+        .book-table .edit-btn:hover,
+        .book-table .edit-btn:focus-visible,
+        .book-table .empty-row td {
+            color: #000 !important;
+            font-size: 1rem !important;
+        }
+
+        .book-table .book-entry {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .book-table .book-title-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .book-table .book-title-text,
+        .book-table .book-title-text *,
+        .book-table .book-title-text a {
+            min-width: 0;
+            color: #000 !important;
+            font-size: 1.1rem !important;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+            text-decoration: none;
+        }
+
+        .book-table .book-title-text a:hover {
+            color: #000 !important;
+            text-decoration: underline;
+        }
+
+        .book-table .book-meta {
+            margin-top: 0.16rem;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
+
+        .book-table .edit-btn {
+            flex: 0 0 auto;
+            padding: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        /* 听写组合下拉 */
+        .dictation-combobox {
+            position: relative;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .dictation-primary-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 44px;
+            gap: 7px;
+            width: 100%;
+        }
+
+        .dictation-primary-row input {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .dictation-toggle {
+            min-height: 44px;
+            border: 1px solid #d1d9e6;
+            border-radius: 16px;
+            background: #fff;
+            color: #475569;
+            font: inherit;
+            font-weight: 700;
+        }
+
+        .dictation-toggle:hover,
+        .dictation-toggle:focus-visible {
+            background: #f1f5f9;
+            outline: none;
+        }
+
+        .dictation-menu {
+            position: absolute;
+            top: calc(44px + 7px);
+            left: 0;
+            right: 0;
+            z-index: 1250;
+            display: none;
+            max-height: 260px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 15px;
+            background: #fff;
+            box-shadow: 0 15px 30px rgba(15, 23, 42, 0.14);
+        }
+
+        .dictation-menu.open {
+            display: block;
+        }
+
+        .dictation-option {
+            display: block;
+            width: 100%;
+            padding: 0.55rem 0.65rem;
+            border: 0;
+            border-radius: 10px;
+            background: #fff;
+            color: #0f172a;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .dictation-option:hover,
+        .dictation-option:focus-visible {
+            background: #f1f5f9;
+            outline: none;
+        }
+
+        .dictation-option.is-selected {
+            background: #eef2ff;
+            color: #1E40AF;
+            font-weight: 650;
+        }
+
+        .dictation-empty {
+            padding: 0.65rem;
+            color: #94a3b8;
+            text-align: center;
+            font-size: 0.82rem;
+        }
+
+        .dictation-selected {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 0.55rem;
+        }
+
+        .dictation-selected:empty {
+            display: none;
+        }
+
+        .dictation-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 0.36rem 0.58rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #0f172a;
+            font-size: 0.86rem;
+        }
+
+        .dictation-chip-remove {
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: 0;
+            border-radius: 4px;
+            background: #e2e8f0;
+            color: #64748b;
+            font: inherit;
+            line-height: 1;
+        }
+
+        .dictation-chip-remove:hover {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* 分类管理手动排序 */
+        .category-manager-row .category-move-btn {
+            padding: 0.42rem 0.7rem;
+            border: 0;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .category-manager-row .category-move-btn:hover:not(:disabled) {
+            background: #e2e8f0;
+        }
+
+        .category-manager-row .category-move-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        /* 回到顶部：主色实心圆，无箭头，JS 动画 50ms */
+        .back-to-top {
+            right: 18px !important;
+            top: 70% !important;
+            width: 32px !important;
+            height: 32px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0 !important;
+            border: 0 !important;
+            border-radius: 50% !important;
+            background: #1E40AF !important;
+            color: #1E40AF !important;
+            font-size: 0 !important;
+            text-indent: -9999px !important;
+            overflow: hidden !important;
+            box-shadow: 0 3px 10px rgba(30, 64, 175, 0.28) !important;
+            backdrop-filter: none !important;
+        }
+
+        .back-to-top .back-to-top-icon,
+        .back-to-top::before,
+        .back-to-top::after {
+            display: none !important;
+            content: none !important;
+        }
+
+        .back-to-top:hover,
+        .back-to-top:focus-visible {
+            background: #1E3A8A !important;
+            color: #1E3A8A !important;
+            outline: none !important;
+        }
+
+        @media (max-width: 700px) {
+            .book-table th,
+            .book-table td,
+            .book-table th *,
+            .book-table td *,
+            .book-table .book-meta,
+            .book-table .edit-btn {
+                font-size: 1rem !important;
+            }
+
+            .book-table .book-title-text,
+            .book-table .book-title-text *,
+            .book-table .book-title-text a {
+                font-size: 1.1rem !important;
+            }
+
+            .category-manager-row {
+                grid-template-columns: minmax(0, 1fr) auto auto;
+            }
+
+            .category-manager-row .category-save-btn,
+            .category-manager-row .category-delete-btn {
+                grid-row: 2;
+            }
+        }
+
+    
+        @media (max-width: 700px) {
+            .category-manager-row .category-manager-input {
+                grid-column: 1 / -1;
+            }
+            .category-manager-row .category-save-btn,
+            .category-manager-row .category-up-btn,
+            .category-manager-row .category-down-btn,
+            .category-manager-row .category-delete-btn {
+                grid-row: auto;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -1042,10 +1350,28 @@
                             aria-autocomplete="list"
                             aria-expanded="false"
                             aria-controls="categoryDropdown"
-                            placeholder="输入新分类，之后会自动出现在下拉列表中"
+                           
                         >
                         <button type="button" class="category-toggle" id="categoryToggle" aria-label="展开分类选项" title="展开分类选项">▼</button>
                         <div class="category-menu" id="categoryDropdown" role="listbox"></div>
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="dictationInput">听写</label>
+                    <div class="dictation-combobox" id="dictationCombo">
+                        <div class="dictation-primary-row">
+                            <input
+                                type="text"
+                                id="dictationInput"
+                                autocomplete="off"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="dictationDropdown"
+                            >
+                            <button type="button" class="dictation-toggle" id="dictationToggle" aria-label="展开听写选项" title="展开听写选项">▾</button>
+                        </div>
+                        <div class="dictation-menu" id="dictationDropdown" role="listbox"></div>
+                        <div class="dictation-selected" id="dictationSelected" aria-live="polite"></div>
                     </div>
                 </div>
                 <button class="btn-primary" id="addBtn">添加</button>
@@ -1061,13 +1387,11 @@
                 <thead>
                     <tr>
                         <th>字词</th>
-                        <th>分类</th>
-                        <th class="col-action">操作</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr class="empty-row">
-                        <td colspan="3">加载中...</td>
+                        <td colspan="1">加载中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -1099,6 +1423,24 @@
                     <div class="category-menu" id="editCategoryDropdown" role="listbox"></div>
                 </div>
             </div>
+            <div class="form-group">
+                <label for="editDictationInput">听写</label>
+                <div class="dictation-combobox" id="editDictationCombo">
+                    <div class="dictation-primary-row">
+                        <input
+                            type="text"
+                            id="editDictationInput"
+                            autocomplete="off"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            aria-controls="editDictationDropdown"
+                        >
+                        <button type="button" class="dictation-toggle" id="editDictationToggle" aria-label="展开听写选项" title="展开听写选项">▾</button>
+                    </div>
+                    <div class="dictation-menu" id="editDictationDropdown" role="listbox"></div>
+                    <div class="dictation-selected" id="editDictationSelected" aria-live="polite"></div>
+                </div>
+            </div>
             <div class="modal-actions">
                 <button class="btn-modal delete" id="editDeleteBtn" type="button">删除</button>
                 <button class="btn-modal cancel" id="editCancelBtn" type="button">取消</button>
@@ -1112,14 +1454,14 @@
         <div class="modal-box" style="max-width:680px;">
             <h3 id="categoryManagerHeading">管理</h3>
             <div class="modal-sub">
-                可修改或删除下拉菜单中的历史分类。修改名称时可同步更新现有条目；删除只移除候选项，不删除已有书目。
+                可修改、删除或手动调整下拉菜单中的分类顺序。修改名称时可同步更新现有条目；删除只移除候选项，不删除已有书目。
             </div>
             <label class="checkbox-row">
                 <input type="checkbox" id="updateEntriesOnCategoryRename" checked>
                 <span>修改分类名称时，同步更新所有使用该分类的条目</span>
             </label>
             <div class="category-manager-list" id="categoryManagerList"></div>
-            <p class="category-manager-note">分类候选项会按拼音顺序排列。删除后的分类若再次手动输入，会重新加入下拉菜单。</p>
+            <p class="category-manager-note">分类候选项严格按手动顺序排列，可使用上移/下移调整。删除后的分类若再次手动输入，会追加到下拉菜单末尾。</p>
             <div class="modal-actions">
                 <button class="btn-modal save" id="categoryManagerCloseBtn" type="button">完成</button>
             </div>
@@ -1174,9 +1516,7 @@
     </div>
 
 
-    <button type="button" class="back-to-top" id="backToTopBtn" aria-label="回到顶部" title="回到顶部">
-        <span class="back-to-top-icon" aria-hidden="true">↑</span>
-    </button>
+    <button type="button" class="back-to-top" id="backToTopBtn" aria-label="回到顶部" title="回到顶部"></button>
 
     <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
@@ -1214,6 +1554,7 @@
             const TOKEN_KEY = `${STORAGE_NAMESPACE}:token_local`;
             const LEGACY_TOKEN_SESSION_KEY = `${STORAGE_NAMESPACE}:token_session`;
             const CATEGORY_OPTIONS_KEY = `${STORAGE_NAMESPACE}:category_options`;
+            const DICTATION_OPTIONS_KEY = `${STORAGE_NAMESPACE}:dictation_options_v1`;
             const STORAGE_KEY = `${STORAGE_NAMESPACE}:books`;
             const SYNC_SCHEMA_VERSION = 1;
             const SYNC_META_KEY = `${STORAGE_NAMESPACE}:sync_meta_v1`;
@@ -1225,6 +1566,9 @@
             let books = [];
             let categoryValues = [];
             let excludedCategoryKeys = new Set();
+            let dictationValues = [];
+            let pendingAddDictation = [];
+            let pendingEditDictation = [];
             let editingIndex = null;
             let editInitialState = null;
             let isSyncing = false;
@@ -1247,6 +1591,10 @@
             const categoryInput = document.getElementById('categoryInput');
             const categoryToggle = document.getElementById('categoryToggle');
             const categoryDropdown = document.getElementById('categoryDropdown');
+            const dictationInput = document.getElementById('dictationInput');
+            const dictationToggle = document.getElementById('dictationToggle');
+            const dictationDropdown = document.getElementById('dictationDropdown');
+            const dictationSelected = document.getElementById('dictationSelected');
             const addBtn = document.getElementById('addBtn');
             const tableBody = document.getElementById('tableBody');
             const countDisplay = document.getElementById('countDisplay');
@@ -1267,6 +1615,10 @@
             const editCategoryInput = document.getElementById('editCategoryInput');
             const editCategoryToggle = document.getElementById('editCategoryToggle');
             const editCategoryDropdown = document.getElementById('editCategoryDropdown');
+            const editDictationInput = document.getElementById('editDictationInput');
+            const editDictationToggle = document.getElementById('editDictationToggle');
+            const editDictationDropdown = document.getElementById('editDictationDropdown');
+            const editDictationSelected = document.getElementById('editDictationSelected');
             const editDeleteBtn = document.getElementById('editDeleteBtn');
             const editCancelBtn = document.getElementById('editCancelBtn');
             const editSaveBtn = document.getElementById('editSaveBtn');
@@ -1359,6 +1711,7 @@
             }
 
             function uniqueCategoryValues(values) {
+                // 分类严格保留首次出现/用户手动调整后的顺序，不再自动按拼音排序。
                 const seen = new Set();
                 const result = [];
                 values.forEach(value => {
@@ -1368,7 +1721,6 @@
                     seen.add(key);
                     result.push(normalized);
                 });
-                result.sort((a, b) => titleCollator.compare(a, b));
                 return result;
             }
 
@@ -1483,6 +1835,249 @@
                 editCategoryInput.setAttribute('aria-expanded', 'false');
             }
 
+            // ---------- 听写下拉：无预设，用户手动添加；候选项和条目内均按首字母排序 ----------
+            const dictationCollator = new Intl.Collator('en', {
+                usage: 'sort',
+                sensitivity: 'base',
+                numeric: true
+            });
+
+            function normalizeDictationValue(value) {
+                return String(value || '').normalize('NFKC').trim();
+            }
+
+            function dictationKey(value) {
+                return normalizeDictationValue(value).toLocaleLowerCase('en');
+            }
+
+            function compareDictationValues(a, b) {
+                const valueA = normalizeDictationValue(a);
+                const valueB = normalizeDictationValue(b);
+                const firstA = Array.from(valueA)[0] || '';
+                const firstB = Array.from(valueB)[0] || '';
+
+                let compared = dictationCollator.compare(firstA, firstB);
+                if (compared !== 0) return compared;
+
+                compared = dictationCollator.compare(valueA, valueB);
+                if (compared !== 0) return compared;
+
+                return valueA < valueB ? -1 : (valueA > valueB ? 1 : 0);
+            }
+
+            function sortDictationValues(values) {
+                const seen = new Set();
+                const result = [];
+                (Array.isArray(values) ? values : []).forEach(raw => {
+                    const value = normalizeDictationValue(raw);
+                    const key = dictationKey(value);
+                    if (!value || seen.has(key)) return;
+                    seen.add(key);
+                    result.push(value);
+                });
+                return result.sort(compareDictationValues);
+            }
+
+            function saveDictationOptions() {
+                dictationValues = sortDictationValues(dictationValues);
+                safeLocalSet(DICTATION_OPTIONS_KEY, JSON.stringify(dictationValues));
+            }
+
+            function loadDictationOptions() {
+                dictationValues = [];
+                const stored = safeLocalGet(DICTATION_OPTIONS_KEY);
+                if (stored) {
+                    try {
+                        const parsed = JSON.parse(stored);
+                        dictationValues = sortDictationValues(Array.isArray(parsed) ? parsed : []);
+                    } catch (error) {
+                        console.error('听写选项解析失败:', error);
+                    }
+                }
+                renderDictationCombo('add');
+                renderDictationCombo('edit');
+            }
+
+            function rememberDictationValues(values) {
+                const merged = sortDictationValues([
+                    ...dictationValues,
+                    ...(Array.isArray(values) ? values : [values])
+                ]);
+                if (JSON.stringify(merged) !== JSON.stringify(dictationValues)) {
+                    dictationValues = merged;
+                    saveDictationOptions();
+                }
+                renderDictationCombo('add');
+                renderDictationCombo('edit');
+            }
+
+            function syncDictationOptionsFromBooks() {
+                rememberDictationValues(
+                    books.flatMap(item => Array.isArray(item.dictation) ? item.dictation : [])
+                );
+            }
+
+            function getDictationContext(which) {
+                const isAdd = which === 'add';
+                return {
+                    input: isAdd ? dictationInput : editDictationInput,
+                    toggle: isAdd ? dictationToggle : editDictationToggle,
+                    menu: isAdd ? dictationDropdown : editDictationDropdown,
+                    selectedEl: isAdd ? dictationSelected : editDictationSelected,
+                    selected: isAdd ? pendingAddDictation : pendingEditDictation
+                };
+            }
+
+            function setPendingDictation(which, values) {
+                if (which === 'add') pendingAddDictation = sortDictationValues(values);
+                else pendingEditDictation = sortDictationValues(values);
+            }
+
+            function renderDictationCombo(which) {
+                const ctx = getDictationContext(which);
+                const selected = sortDictationValues(ctx.selected);
+                setPendingDictation(which, selected);
+
+                const selectedKeys = new Set(selected.map(dictationKey));
+                const query = dictationKey(ctx.input?.value || '');
+                const options = sortDictationValues(dictationValues)
+                    .filter(value => !query || dictationKey(value).includes(query));
+
+                ctx.menu.innerHTML = options.length
+                    ? options.map(value => `
+                        <button
+                            type="button"
+                            class="dictation-option${selectedKeys.has(dictationKey(value)) ? ' is-selected' : ''}"
+                            data-value="${escapeAttribute(value)}"
+                            role="option"
+                            aria-selected="${selectedKeys.has(dictationKey(value)) ? 'true' : 'false'}"
+                        >${selectedKeys.has(dictationKey(value)) ? '✓ ' : ''}${escapeHtml(value)}</button>
+                    `).join('')
+                    : `<div class="dictation-empty">${query ? '无匹配选项，可按回车添加' : '暂无选项，可手动输入后按回车添加'}</div>`;
+
+                ctx.selectedEl.innerHTML = selected.map(value => `
+                    <span class="dictation-chip">
+                        <span>${escapeHtml(value)}</span>
+                        <button type="button" class="dictation-chip-remove" data-value="${escapeAttribute(value)}" aria-label="移除听写 ${escapeAttribute(value)}">×</button>
+                    </span>
+                `).join('');
+            }
+
+            function closeDictationMenus() {
+                dictationDropdown.classList.remove('open');
+                editDictationDropdown.classList.remove('open');
+                dictationInput.setAttribute('aria-expanded', 'false');
+                editDictationInput.setAttribute('aria-expanded', 'false');
+            }
+
+            function openDictationMenu(which) {
+                const ctx = getDictationContext(which);
+                closeDictationMenus();
+                renderDictationCombo(which);
+                ctx.menu.classList.add('open');
+                ctx.input.setAttribute('aria-expanded', 'true');
+            }
+
+            function commitDictationInput(which) {
+                const ctx = getDictationContext(which);
+                const value = normalizeDictationValue(ctx.input.value);
+                if (!value) return false;
+
+                const selected = sortDictationValues([...ctx.selected, value]);
+                setPendingDictation(which, selected);
+                rememberDictationValues(value);
+                ctx.input.value = '';
+                renderDictationCombo(which);
+                return true;
+            }
+
+            function toggleDictationSelection(which, value) {
+                const ctx = getDictationContext(which);
+                const normalized = normalizeDictationValue(value);
+                const key = dictationKey(normalized);
+                const exists = ctx.selected.some(item => dictationKey(item) === key);
+                const next = exists
+                    ? ctx.selected.filter(item => dictationKey(item) !== key)
+                    : [...ctx.selected, normalized];
+                setPendingDictation(which, next);
+                rememberDictationValues(normalized);
+                renderDictationCombo(which);
+            }
+
+            function setupDictationCombobox(which) {
+                const ctx = getDictationContext(which);
+
+                ctx.toggle.addEventListener('click', event => {
+                    event.stopPropagation();
+                    if (ctx.menu.classList.contains('open')) closeDictationMenus();
+                    else {
+                        openDictationMenu(which);
+                        ctx.input.focus();
+                    }
+                });
+
+                ctx.input.addEventListener('focus', () => {
+                    if (dictationValues.length > 0) openDictationMenu(which);
+                });
+
+                ctx.input.addEventListener('input', () => {
+                    openDictationMenu(which);
+                });
+
+                ctx.input.addEventListener('keydown', event => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        commitDictationInput(which);
+                        closeDictationMenus();
+                        ctx.input.focus();
+                    } else if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        openDictationMenu(which);
+                        ctx.menu.querySelector('.dictation-option')?.focus();
+                    } else if (event.key === 'Escape') {
+                        closeDictationMenus();
+                    }
+                });
+
+                ctx.menu.addEventListener('click', event => {
+                    const option = event.target.closest('.dictation-option');
+                    if (!option) return;
+                    toggleDictationSelection(which, option.dataset.value || '');
+                });
+
+                ctx.menu.addEventListener('keydown', event => {
+                    if (!event.target.matches('.dictation-option')) return;
+                    const options = [...ctx.menu.querySelectorAll('.dictation-option')];
+                    const index = options.indexOf(event.target);
+
+                    if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        options[(index + 1) % options.length]?.focus();
+                    } else if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        options[(index - 1 + options.length) % options.length]?.focus();
+                    } else if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleDictationSelection(which, event.target.dataset.value || '');
+                    } else if (event.key === 'Escape') {
+                        closeDictationMenus();
+                        ctx.input.focus();
+                    }
+                });
+
+                ctx.selectedEl.addEventListener('click', event => {
+                    const remove = event.target.closest('.dictation-chip-remove');
+                    if (!remove) return;
+                    const key = dictationKey(remove.dataset.value || '');
+                    setPendingDictation(
+                        which,
+                        ctx.selected.filter(value => dictationKey(value) !== key)
+                    );
+                    renderDictationCombo(which);
+                });
+            }
+
             function openCategoryMenu(input, menu) {
                 closeCategoryMenus();
                 renderCategoryMenu(input, menu);
@@ -1577,12 +2172,19 @@
                 const title = typeof item.title === 'string' ? item.title.trim() : '';
                 if (!title) return null;
 
+                const rawDictation = Array.isArray(item.dictation)
+                    ? item.dictation
+                    : (typeof item.dictation === 'string'
+                        ? item.dictation.split(/[、，,;；]+/)
+                        : []);
+
                 return {
                     title,
                     url: typeof item.url === 'string' ? item.url.trim() : '',
                     category: typeof item.category === 'string'
                         ? item.category.trim()
-                        : (typeof item.type === 'string' ? item.type.trim() : '')
+                        : (typeof item.type === 'string' ? item.type.trim() : ''),
+                    dictation: sortDictationValues(rawDictation)
                 };
             }
 
@@ -1647,14 +2249,18 @@
                     .map(item => ({
                         title: item.title,
                         url: item.url,
-                        category: item.category
+                        category: item.category,
+                        dictation: sortDictationValues(item.dictation)
                     }))
                     .sort((a, b) => {
                         for (const field of ['category', 'title', 'url']) {
                             const compared = fingerprintCollator.compare(a[field], b[field]);
                             if (compared !== 0) return compared;
                         }
-                        return 0;
+                        return fingerprintCollator.compare(
+                            a.dictation.join('\u0001'),
+                            b.dictation.join('\u0001')
+                        );
                     });
                 return JSON.stringify(canonical);
             }
@@ -2287,6 +2893,7 @@
             function applySortAndRender() {
                 sortBooks();
                 syncCategoryOptionsFromBooks();
+                syncDictationOptionsFromBooks();
                 renderTable();
                 saveToLocal();
             }
@@ -2294,23 +2901,29 @@
             function renderTable() {
                 countDisplay.textContent = books.length;
                 if (books.length === 0) {
-                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="3">图书列表为空，添加一本书吧！</td></tr>';
+                    tableBody.innerHTML = '<tr class="empty-row"><td colspan="1">图书列表为空，添加一本书吧！</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = books.map((item, index) => {
                     const title = escapeHtml(item.title);
-                    const category = escapeHtml(item.category);
+                    const category = escapeHtml(item.category || '');
+                    const dictation = sortDictationValues(item.dictation || [])
+                        .map(escapeHtml)
+                        .join('、');
                     const titleHtml = item.url
                         ? `<a href="${escapeAttribute(item.url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
                         : title;
 
                     return `
                         <tr data-index="${index}">
-                            <td class="col-title">${titleHtml}</td>
-                            <td class="col-category">${category}</td>
-                            <td class="col-action">
-                                <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
+                            <td class="book-entry">
+                                <div class="book-title-row">
+                                    <div class="book-title-text">${titleHtml}</div>
+                                    <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
+                                </div>
+                                <div class="book-meta book-category">分类：${category}</div>
+                                <div class="book-meta book-dictation">听写：${dictation}</div>
                             </td>
                         </tr>
                     `;
@@ -2335,24 +2948,34 @@
                 }
 
                 const category = normalizeCategoryValue(categoryInput.value);
+                if (normalizeDictationValue(dictationInput.value)) commitDictationInput('add');
+                const dictation = sortDictationValues(pendingAddDictation);
+
                 books.push({
                     title: parsed.title,
                     url: parsed.url,
-                    category
+                    category,
+                    dictation
                 });
                 rememberCategory(category);
+                rememberDictationValues(dictation);
 
                 applySortAndRender();
                 markLocalChange();
                 titleInput.value = '';
                 categoryInput.value = '';
+                dictationInput.value = '';
+                pendingAddDictation = [];
+                renderDictationCombo('add');
                 titleInput.focus();
             }
 
             function getEditCurrentState() {
                 return {
                     title: editTitleInput.value,
-                    category: editCategoryInput.value
+                    category: editCategoryInput.value,
+                    dictationDraft: editDictationInput.value,
+                    dictation: sortDictationValues(pendingEditDictation)
                 };
             }
 
@@ -2360,7 +2983,9 @@
                 if (!editInitialState) return true;
                 const current = getEditCurrentState();
                 return current.title === editInitialState.title &&
-                    current.category === editInitialState.category;
+                    current.category === editInitialState.category &&
+                    current.dictationDraft === editInitialState.dictationDraft &&
+                    JSON.stringify(current.dictation) === JSON.stringify(editInitialState.dictation);
             }
 
             function openEditModal(index) {
@@ -2369,6 +2994,9 @@
                 editTitleDisplay.textContent = item.title;
                 editTitleInput.value = formatTitleInput(item);
                 editCategoryInput.value = item.category || '';
+                editDictationInput.value = '';
+                pendingEditDictation = sortDictationValues(item.dictation || []);
+                renderDictationCombo('edit');
 
                 // 记录打开编辑框时的原始内容；修改后再恢复原值，也视为“未修改”。
                 editInitialState = getEditCurrentState();
@@ -2381,7 +3009,10 @@
                 editModal.classList.add('hidden');
                 editingIndex = null;
                 editInitialState = null;
+                editDictationInput.value = '';
+                pendingEditDictation = [];
                 closeCategoryMenus();
+                closeDictationMenus();
             }
 
             function saveEdit() {
@@ -2407,12 +3038,17 @@
                 }
 
                 const category = normalizeCategoryValue(editCategoryInput.value);
+                if (normalizeDictationValue(editDictationInput.value)) commitDictationInput('edit');
+                const dictation = sortDictationValues(pendingEditDictation);
+
                 books[editingIndex] = {
                     title: parsed.title,
                     url: parsed.url,
-                    category
+                    category,
+                    dictation
                 };
                 rememberCategory(category);
+                rememberDictationValues(dictation);
 
                 closeEditModal();
                 applySortAndRender();
@@ -2452,9 +3088,30 @@
                             aria-label="修改分类 ${escapeAttribute(category)}"
                         >
                         <button type="button" class="action-btn edit-btn category-save-btn" data-index="${index}">保存</button>
+                        <button type="button" class="action-btn category-move-btn category-up-btn" data-index="${index}" ${index === 0 ? 'disabled' : ''}>上移</button>
+                        <button type="button" class="action-btn category-move-btn category-down-btn" data-index="${index}" ${index === categoryValues.length - 1 ? 'disabled' : ''}>下移</button>
                         <button type="button" class="action-btn delete-btn category-delete-btn" data-index="${index}">删除</button>
                     </div>
                 `).join('');
+            }
+
+            function moveCategoryOption(index, direction) {
+                const targetIndex = index + direction;
+                if (
+                    !Number.isInteger(index) ||
+                    !Number.isInteger(targetIndex) ||
+                    index < 0 ||
+                    targetIndex < 0 ||
+                    index >= categoryValues.length ||
+                    targetIndex >= categoryValues.length
+                ) return;
+
+                const [moved] = categoryValues.splice(index, 1);
+                categoryValues.splice(targetIndex, 0, moved);
+                saveCategoryOptions();
+                renderCategoryOptions();
+                renderCategoryManager();
+                showToast(`已${direction < 0 ? '上移' : '下移'}“${moved}”`, 'success');
             }
 
             function openCategoryManager() {
@@ -2489,10 +3146,13 @@
                     valueIndex !== index && categoryKey(value) === newKey
                 );
 
-                categoryValues.splice(index, 1);
                 excludedCategoryKeys.add(oldKey);
                 excludedCategoryKeys.delete(newKey);
-                if (!duplicate) categoryValues.push(newCategory);
+                if (duplicate) {
+                    categoryValues.splice(index, 1);
+                } else {
+                    categoryValues[index] = newCategory;
+                }
                 categoryValues = uniqueCategoryValues(categoryValues);
 
                 let updatedCount = 0;
@@ -2739,9 +3399,12 @@
             addBtn.addEventListener('click', addBook);
             setupCategoryCombobox(categoryInput, categoryToggle, categoryDropdown);
             setupCategoryCombobox(editCategoryInput, editCategoryToggle, editCategoryDropdown);
+            setupDictationCombobox('add');
+            setupDictationCombobox('edit');
 
             document.querySelectorAll('.add-section input').forEach(input => {
                 input.addEventListener('keydown', event => {
+                    if (input === dictationInput) return;
                     if (event.key === 'Enter') {
                         event.preventDefault();
                         addBook();
@@ -2768,7 +3431,9 @@
             categoryManagerList.addEventListener('click', event => {
                 const saveButton = event.target.closest('.category-save-btn');
                 const deleteButton = event.target.closest('.category-delete-btn');
-                const button = saveButton || deleteButton;
+                const upButton = event.target.closest('.category-up-btn');
+                const downButton = event.target.closest('.category-down-btn');
+                const button = saveButton || deleteButton || upButton || downButton;
                 if (!button) return;
 
                 const index = Number.parseInt(button.dataset.index, 10);
@@ -2777,6 +3442,10 @@
                 if (saveButton) {
                     const row = saveButton.closest('.category-manager-row');
                     renameCategory(index, row?.querySelector('.category-manager-input'));
+                } else if (upButton) {
+                    moveCategoryOption(index, -1);
+                } else if (downButton) {
+                    moveCategoryOption(index, 1);
                 } else {
                     deleteCategoryOption(index);
                 }
@@ -2791,6 +3460,7 @@
 
             document.addEventListener('click', event => {
                 if (!event.target.closest('.category-combobox')) closeCategoryMenus();
+                if (!event.target.closest('.dictation-combobox')) closeDictationMenus();
             });
 
             syncBtn.addEventListener('click', () => syncToCloud(true, true));
@@ -2844,6 +3514,7 @@
 
             editModal.querySelectorAll('input').forEach(input => {
                 input.addEventListener('keydown', event => {
+                    if (input === editDictationInput) return;
                     if (event.key === 'Enter') {
                         event.preventDefault();
                         saveEdit();
@@ -2854,6 +3525,7 @@
             document.addEventListener('keydown', event => {
                 if (event.key !== 'Escape') return;
                 closeCategoryMenus();
+                closeDictationMenus();
                 if (!editModal.classList.contains('hidden')) closeEditModal();
                 if (!categoryManagerModal.classList.contains('hidden')) closeCategoryManager();
                 if (!configModal.classList.contains('hidden')) closeConfigModal();
@@ -2867,17 +3539,34 @@
 
             window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
             backToTopBtn.addEventListener('click', () => {
-                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                window.scrollTo({
-                    top: 0,
-                    behavior: reduceMotion ? 'auto' : 'smooth'
-                });
+                const startY = window.scrollY || window.pageYOffset || 0;
+                if (startY <= 0) return;
+
+                const duration = 50;
+                const root = document.documentElement;
+                const previousInlineScrollBehavior = root.style.scrollBehavior;
+                root.style.scrollBehavior = 'auto';
+
+                const startTime = performance.now();
+                const animate = now => {
+                    const progress = Math.min(1, (now - startTime) / duration);
+                    const eased = 1 - Math.pow(1 - progress, 2);
+                    window.scrollTo(0, Math.round(startY * (1 - eased)));
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        root.style.scrollBehavior = previousInlineScrollBehavior;
+                    }
+                };
+                requestAnimationFrame(animate);
             });
 
             // ---------- 初始化 ----------
             loadConfig();
             loadSyncMeta();
             loadCategoryOptions();
+            loadDictationOptions();
             loadFromLocal();
             updateLastSyncDisplay();
             updateBackToTopVisibility();
