@@ -1896,8 +1896,8 @@
                 editCategoryInput.setAttribute('aria-expanded', 'false');
             }
 
-            // ---------- 听写下拉：无预设，用户手动添加；候选项和条目内均按首字母排序 ----------
-            const dictationCollator = new Intl.Collator('en', {
+            // ---------- 听写下拉：无预设，用户手动添加；候选项和条目内均按中文拼音首字母排序 ----------
+            const dictationCollator = new Intl.Collator('zh-CN-u-co-pinyin', {
                 usage: 'sort',
                 sensitivity: 'base',
                 numeric: true
