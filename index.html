@@ -1169,6 +1169,66 @@
             font-weight: 650;
         }
 
+        /* 添加区听写候选项管理：主选项 + 改/删 */
+        .dictation-option-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 6px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .dictation-option-row + .dictation-option-row {
+            margin-top: 2px;
+        }
+
+        .dictation-option-main {
+            min-width: 0;
+        }
+
+        .dictation-option-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dictation-option-action {
+            min-width: 28px;
+            height: 27px;
+            padding: 0 6px;
+            border: 0;
+            border-radius: 8px;
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 650;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .dictation-option-edit {
+            background: #f1f5f9;
+            color: #1E40AF;
+        }
+
+        .dictation-option-edit:hover,
+        .dictation-option-edit:focus-visible {
+            background: #e2e8f0;
+            color: #1E3A8A;
+            outline: none;
+        }
+
+        .dictation-option-delete {
+            background: #fff1f2;
+            color: #991b1b;
+        }
+
+        .dictation-option-delete:hover,
+        .dictation-option-delete:focus-visible {
+            background: #fee2e2;
+            color: #991b1b;
+            outline: none;
+        }
+
         .dictation-empty {
             padding: 0.65rem;
             color: #94a3b8;
@@ -1620,6 +1680,7 @@
             let categoryValues = [];
             let excludedCategoryKeys = new Set();
             let dictationValues = [];
+            let excludedDictationKeys = new Set();
             let pendingAddDictation = [];
             let pendingEditDictation = [];
             let editingIndex = null;
@@ -1940,17 +2001,34 @@
             }
 
             function saveDictationOptions() {
-                dictationValues = sortDictationValues(dictationValues);
-                safeLocalSet(DICTATION_OPTIONS_KEY, JSON.stringify(dictationValues));
+                dictationValues = sortDictationValues(dictationValues)
+                    .filter(value => !excludedDictationKeys.has(dictationKey(value)));
+                safeLocalSet(DICTATION_OPTIONS_KEY, JSON.stringify({
+                    values: dictationValues,
+                    excluded: [...excludedDictationKeys]
+                }));
             }
 
             function loadDictationOptions() {
                 dictationValues = [];
+                excludedDictationKeys = new Set();
                 const stored = safeLocalGet(DICTATION_OPTIONS_KEY);
                 if (stored) {
                     try {
                         const parsed = JSON.parse(stored);
-                        dictationValues = sortDictationValues(Array.isArray(parsed) ? parsed : []);
+                        if (Array.isArray(parsed)) {
+                            // 兼容旧版本：历史格式直接保存为数组。
+                            dictationValues = sortDictationValues(parsed);
+                        } else if (parsed && typeof parsed === 'object') {
+                            excludedDictationKeys = new Set(
+                                (Array.isArray(parsed.excluded) ? parsed.excluded : [])
+                                    .map(value => dictationKey(value))
+                                    .filter(Boolean)
+                            );
+                            dictationValues = sortDictationValues(
+                                Array.isArray(parsed.values) ? parsed.values : []
+                            ).filter(value => !excludedDictationKeys.has(dictationKey(value)));
+                        }
                     } catch (error) {
                         console.error('听写选项解析失败:', error);
                     }
@@ -1960,9 +2038,12 @@
             }
 
             function rememberDictationValues(values) {
+                const candidates = (Array.isArray(values) ? values : [values])
+                    .map(normalizeDictationValue)
+                    .filter(value => value && !excludedDictationKeys.has(dictationKey(value)));
                 const merged = sortDictationValues([
                     ...dictationValues,
-                    ...(Array.isArray(values) ? values : [values])
+                    ...candidates
                 ]);
                 if (JSON.stringify(merged) !== JSON.stringify(dictationValues)) {
                     dictationValues = merged;
@@ -2004,16 +2085,29 @@
                 const options = sortDictationValues(dictationValues)
                     .filter(value => !query || dictationKey(value).includes(query));
 
+                const canManage = which === 'add';
                 ctx.menu.innerHTML = options.length
-                    ? options.map(value => `
-                        <button
-                            type="button"
-                            class="dictation-option${selectedKeys.has(dictationKey(value)) ? ' is-selected' : ''}"
-                            data-value="${escapeAttribute(value)}"
-                            role="option"
-                            aria-selected="${selectedKeys.has(dictationKey(value)) ? 'true' : 'false'}"
-                        >${selectedKeys.has(dictationKey(value)) ? '✓ ' : ''}${escapeHtml(value)}</button>
-                    `).join('')
+                    ? options.map(value => {
+                        const selectedClass = selectedKeys.has(dictationKey(value)) ? ' is-selected' : '';
+                        const selectedMark = selectedKeys.has(dictationKey(value)) ? '✓ ' : '';
+                        const optionButton = `
+                            <button
+                                type="button"
+                                class="dictation-option dictation-option-main${selectedClass}"
+                                data-value="${escapeAttribute(value)}"
+                                role="option"
+                                aria-selected="${selectedKeys.has(dictationKey(value)) ? 'true' : 'false'}"
+                            >${selectedMark}${escapeHtml(value)}</button>`;
+                        if (!canManage) return optionButton;
+                        return `
+                            <div class="dictation-option-row" data-value="${escapeAttribute(value)}">
+                                ${optionButton}
+                                <span class="dictation-option-actions">
+                                    <button type="button" class="dictation-option-action dictation-option-edit" data-action="rename" title="修改">改</button>
+                                    <button type="button" class="dictation-option-action dictation-option-delete" data-action="delete" title="删除">删</button>
+                                </span>
+                            </div>`;
+                    }).join('')
                     : `<div class="dictation-empty">${query ? '无匹配选项，可按回车添加' : '暂无选项，可手动输入后按回车添加'}</div>`;
 
                 ctx.selectedEl.innerHTML = selected.map(value => `
@@ -2046,6 +2140,8 @@
 
                 const selected = sortDictationValues([...ctx.selected, value]);
                 setPendingDictation(which, selected);
+                // 用户手动重新输入曾删除的候选值时，视为明确恢复该候选项。
+                excludedDictationKeys.delete(dictationKey(value));
                 rememberDictationValues(value);
                 ctx.input.value = '';
                 renderDictationCombo(which);
@@ -2063,6 +2159,88 @@
                 setPendingDictation(which, next);
                 rememberDictationValues(normalized);
                 renderDictationCombo(which);
+            }
+
+            function renameDictationFromMenu(value) {
+                const oldValue = normalizeDictationValue(value);
+                if (!oldValue) return;
+
+                const prompted = prompt('修改听写：', oldValue);
+                if (prompted === null) return;
+
+                const newValue = normalizeDictationValue(prompted);
+                if (!newValue) {
+                    showToast('听写名称不能为空', 'error');
+                    return;
+                }
+
+                const oldKey = dictationKey(oldValue);
+                const newKey = dictationKey(newValue);
+                if (oldKey === newKey && oldValue === newValue) return;
+
+                const duplicate = dictationValues.some(
+                    item => dictationKey(item) === newKey && dictationKey(item) !== oldKey
+                );
+
+                let updatedCount = 0;
+                books = books.map(item => {
+                    const values = Array.isArray(item.dictation) ? item.dictation : [];
+                    if (!values.some(entry => dictationKey(entry) === oldKey)) return item;
+                    updatedCount += 1;
+                    return {
+                        ...item,
+                        dictation: sortDictationValues(
+                            values.map(entry => dictationKey(entry) === oldKey ? newValue : entry)
+                        )
+                    };
+                });
+
+                pendingAddDictation = sortDictationValues(
+                    pendingAddDictation.map(entry => dictationKey(entry) === oldKey ? newValue : entry)
+                );
+                pendingEditDictation = sortDictationValues(
+                    pendingEditDictation.map(entry => dictationKey(entry) === oldKey ? newValue : entry)
+                );
+
+                if (dictationKey(dictationInput.value) === oldKey) dictationInput.value = newValue;
+                if (dictationKey(editDictationInput.value) === oldKey) editDictationInput.value = newValue;
+
+                excludedDictationKeys.add(oldKey);
+                excludedDictationKeys.delete(newKey);
+                dictationValues = sortDictationValues([
+                    ...dictationValues.filter(entry => dictationKey(entry) !== oldKey),
+                    newValue
+                ]);
+                saveDictationOptions();
+                applySortAndRender();
+                markLocalChange();
+
+                showToast(
+                    `${duplicate ? '已合并为' : '已修改为'}“${newValue}”${updatedCount ? `，并更新 ${updatedCount} 个条目` : ''}`,
+                    'success'
+                );
+            }
+
+            function deleteDictationOption(value) {
+                const normalized = normalizeDictationValue(value);
+                if (!normalized) return;
+
+                const key = dictationKey(normalized);
+                const usedCount = books.filter(
+                    item => Array.isArray(item.dictation) && item.dictation.some(entry => dictationKey(entry) === key)
+                ).length;
+                const usageNote = usedCount
+                    ? `\n\n当前有 ${usedCount} 个条目使用该听写；这些条目会保留原文字。`
+                    : '';
+
+                if (!confirm(`确定从听写下拉菜单删除“${normalized}”吗？${usageNote}`)) return;
+
+                dictationValues = dictationValues.filter(entry => dictationKey(entry) !== key);
+                excludedDictationKeys.add(key);
+                saveDictationOptions();
+                renderDictationCombo('add');
+                renderDictationCombo('edit');
+                showToast(`已从听写候选项删除“${normalized}”`, 'success');
             }
 
             function setupDictationCombobox(which) {
@@ -2102,12 +2280,36 @@
                 });
 
                 ctx.menu.addEventListener('click', event => {
+                    const actionButton = event.target.closest('.dictation-option-action');
+                    if (actionButton && which === 'add') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const row = actionButton.closest('.dictation-option-row');
+                        const value = row?.dataset.value || '';
+                        const action = actionButton.dataset.action || '';
+                        if (action === 'rename') renameDictationFromMenu(value);
+                        else if (action === 'delete') deleteDictationOption(value);
+                        return;
+                    }
+
                     const option = event.target.closest('.dictation-option');
                     if (!option) return;
                     toggleDictationSelection(which, option.dataset.value || '');
                 });
 
                 ctx.menu.addEventListener('keydown', event => {
+                    if (event.target.matches('.dictation-option-action')) {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            event.target.click();
+                        } else if (event.key === 'Escape') {
+                            event.preventDefault();
+                            closeDictationMenus();
+                            ctx.input.focus();
+                        }
+                        return;
+                    }
+
                     if (!event.target.matches('.dictation-option')) return;
                     const options = [...ctx.menu.querySelectorAll('.dictation-option')];
                     const index = options.indexOf(event.target);
