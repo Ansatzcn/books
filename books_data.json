@@ -1150,7 +1150,9 @@
     "title": "天",
     "url": "",
     "category": "一上表内",
-    "dictation": []
+    "dictation": [
+      "天气"
+    ]
   },
   {
     "title": "田",
