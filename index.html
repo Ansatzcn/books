@@ -390,6 +390,53 @@
             width: 100%;
             padding-right: 3rem;
         }
+        .edit-category-selected {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 0.55rem;
+        }
+        .edit-category-selected:empty {
+            display: none;
+        }
+        .edit-category-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 100%;
+            padding: 0.38rem 0.58rem 0.38rem 0.68rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            background: #f8fafc;
+            color: #0f172a;
+            font-size: 0.86rem;
+            line-height: 1.35;
+        }
+        .edit-category-chip-label {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+        .edit-category-chip-remove {
+            flex: 0 0 auto;
+            width: 19px;
+            height: 19px;
+            padding: 0;
+            border: 0;
+            border-radius: 5px;
+            background: #e2e8f0;
+            color: #64748b;
+            font: inherit;
+            font-size: 1rem;
+            line-height: 19px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .edit-category-chip-remove:hover,
+        .edit-category-chip-remove:focus-visible {
+            background: #fee2e2;
+            color: #991b1b;
+            outline: none;
+        }
         .category-toggle {
             position: absolute;
             top: 50%;
@@ -1553,6 +1600,7 @@
                     >
                     <button type="button" class="category-toggle" id="editCategoryToggle" aria-label="展开分类选项" title="展开分类选项">▼</button>
                     <div class="category-menu" id="editCategoryDropdown" role="listbox"></div>
+                    <div class="edit-category-selected" id="editCategorySelected" aria-live="polite"></div>
                 </div>
             </div>
             <div class="form-group">
@@ -1683,6 +1731,7 @@
             let excludedDictationKeys = new Set();
             let pendingAddDictation = [];
             let pendingEditDictation = [];
+            let pendingEditCategory = '';
             let editingIndex = null;
             let editInitialState = null;
             let isSyncing = false;
@@ -1728,6 +1777,7 @@
             const editCategoryInput = document.getElementById('editCategoryInput');
             const editCategoryToggle = document.getElementById('editCategoryToggle');
             const editCategoryDropdown = document.getElementById('editCategoryDropdown');
+            const editCategorySelected = document.getElementById('editCategorySelected');
             const editDictationInput = document.getElementById('editDictationInput');
             const editDictationToggle = document.getElementById('editDictationToggle');
             const editDictationDropdown = document.getElementById('editDictationDropdown');
@@ -1841,8 +1891,29 @@
                 );
             }
 
+            function getEditCategoryValue() {
+                const draft = normalizeCategoryValue(editCategoryInput.value);
+                return draft || normalizeCategoryValue(pendingEditCategory);
+            }
+
+            function renderEditCategorySelected() {
+                const value = normalizeCategoryValue(pendingEditCategory);
+                editCategorySelected.innerHTML = value
+                    ? `<span class="edit-category-chip"><span class="edit-category-chip-label">${escapeHtml(value)}</span><button type="button" class="edit-category-chip-remove" aria-label="移除分类 ${escapeAttribute(value)}" title="移除">×</button></span>`
+                    : '';
+            }
+
+            function setPendingEditCategory(value) {
+                pendingEditCategory = normalizeCategoryValue(value);
+                renderEditCategorySelected();
+            }
+
             function renderCategoryMenu(input, menu) {
-                const values = getFilteredCategoryValues(input);
+                let values = getFilteredCategoryValues(input);
+                if (input === editCategoryInput && pendingEditCategory) {
+                    const selectedKey = categoryKey(pendingEditCategory);
+                    values = values.filter(value => categoryKey(value) !== selectedKey);
+                }
                 if (values.length === 0) {
                     menu.innerHTML = '<div class="category-menu-empty">暂无可选分类，可直接输入新分类</div>';
                     return;
@@ -1877,6 +1948,7 @@
                 categoryValues = uniqueCategoryValues(categoryValues);
                 renderCategoryMenu(categoryInput, categoryDropdown);
                 renderCategoryMenu(editCategoryInput, editCategoryDropdown);
+                renderEditCategorySelected();
             }
 
             function saveCategoryOptions() {
@@ -2432,7 +2504,14 @@
                         return;
                     }
 
-                    input.value = option.dataset.value || '';
+                    const selectedValue = option.dataset.value || '';
+                    if (input === editCategoryInput) {
+                        setPendingEditCategory(selectedValue);
+                        input.value = '';
+                        renderCategoryMenu(input, menu);
+                    } else {
+                        input.value = selectedValue;
+                    }
                     closeCategoryMenus();
                     input.focus();
                 });
@@ -2462,7 +2541,14 @@
                         options[(index - 1 + options.length) % options.length]?.focus();
                     } else if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        input.value = event.target.dataset.value || '';
+                        const selectedValue = event.target.dataset.value || '';
+                        if (input === editCategoryInput) {
+                            setPendingEditCategory(selectedValue);
+                            input.value = '';
+                            renderCategoryMenu(input, menu);
+                        } else {
+                            input.value = selectedValue;
+                        }
                         closeCategoryMenus();
                         input.focus();
                     } else if (event.key === 'Escape') {
@@ -2471,6 +2557,15 @@
                     }
                 });
             }
+
+            editCategorySelected.addEventListener('click', event => {
+                const remove = event.target.closest('.edit-category-chip-remove');
+                if (!remove) return;
+                setPendingEditCategory('');
+                editCategoryInput.value = '';
+                renderCategoryMenu(editCategoryInput, editCategoryDropdown);
+                editCategoryInput.focus();
+            });
 
             // ---------- 数据规范化 ----------
             function normalizeBookItem(item) {
@@ -3286,7 +3381,7 @@
             function getEditCurrentState() {
                 return {
                     title: editTitleInput.value,
-                    category: editCategoryInput.value,
+                    category: getEditCategoryValue(),
                     dictationDraft: editDictationInput.value,
                     dictation: sortDictationValues(pendingEditDictation)
                 };
@@ -3306,7 +3401,9 @@
                 const item = books[index];
                 editTitleDisplay.textContent = item.title;
                 editTitleInput.value = formatTitleInput(item);
-                editCategoryInput.value = item.category || '';
+                editCategoryInput.value = '';
+                setPendingEditCategory(item.category || '');
+                renderCategoryMenu(editCategoryInput, editCategoryDropdown);
                 editDictationInput.value = '';
                 pendingEditDictation = sortDictationValues(item.dictation || []);
                 renderDictationCombo('edit');
@@ -3322,6 +3419,8 @@
                 editModal.classList.add('hidden');
                 editingIndex = null;
                 editInitialState = null;
+                editCategoryInput.value = '';
+                setPendingEditCategory('');
                 editDictationInput.value = '';
                 pendingEditDictation = [];
                 closeCategoryMenus();
@@ -3350,7 +3449,7 @@
                     return;
                 }
 
-                const category = normalizeCategoryValue(editCategoryInput.value);
+                const category = getEditCategoryValue();
                 if (normalizeDictationValue(editDictationInput.value)) commitDictationInput('edit');
                 const dictation = sortDictationValues(pendingEditDictation);
 
@@ -3439,6 +3538,9 @@
                 }
                 if (categoryKey(editCategoryInput.value) === oldKey) {
                     editCategoryInput.value = newCategory;
+                }
+                if (categoryKey(pendingEditCategory) === oldKey) {
+                    setPendingEditCategory(newCategory);
                 }
 
                 excludedCategoryKeys.add(oldKey);
