@@ -2075,17 +2075,6 @@
                 else pendingEditDictation = sortDictationValues(values);
             }
 
-            function hasAvailableDictationOption(which) {
-                const ctx = getDictationContext(which);
-                const query = dictationKey(ctx.input?.value || '');
-                const selectedKeys = new Set(sortDictationValues(ctx.selected).map(dictationKey));
-                return sortDictationValues(dictationValues).some(value => {
-                    const key = dictationKey(value);
-                    if (query && !key.includes(query)) return false;
-                    if (which === 'edit' && selectedKeys.has(key)) return false;
-                    return true;
-                });
-            }
 
             function renderDictationCombo(which) {
                 const ctx = getDictationContext(which);
@@ -2287,12 +2276,9 @@
                         event.preventDefault();
                         event.stopPropagation();
 
-                        // 编辑框：听写已选完、输入为空且下拉菜单没有可选项时，Enter 直接保存。
-                        if (
-                            which === 'edit' &&
-                            !normalizeDictationValue(ctx.input.value) &&
-                            !hasAvailableDictationOption(which)
-                        ) {
+                        // 编辑框：只要听写输入字段为空，Enter 就直接保存。
+                        // 不再依赖下拉菜单是否还有候选项，避免候选历史阻止保存。
+                        if (which === 'edit' && !normalizeDictationValue(ctx.input.value)) {
                             closeDictationMenus();
                             saveEdit();
                             return;
