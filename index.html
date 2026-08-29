@@ -2267,6 +2267,18 @@
                     if (event.key === 'Enter') {
                         event.preventDefault();
                         event.stopPropagation();
+
+                        // 编辑框：听写已选完、输入为空且下拉菜单没有可选项时，Enter 直接保存。
+                        if (which === 'edit' && !normalizeDictationValue(ctx.input.value)) {
+                            renderDictationCombo(which);
+                            const hasAvailableOption = !!ctx.menu.querySelector('.dictation-option');
+                            if (!hasAvailableOption) {
+                                closeDictationMenus();
+                                saveEdit();
+                                return;
+                            }
+                        }
+
                         commitDictationInput(which);
                         closeDictationMenus();
                         ctx.input.focus();
