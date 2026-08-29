@@ -2075,6 +2075,18 @@
                 else pendingEditDictation = sortDictationValues(values);
             }
 
+            function hasAvailableDictationOption(which) {
+                const ctx = getDictationContext(which);
+                const query = dictationKey(ctx.input?.value || '');
+                const selectedKeys = new Set(sortDictationValues(ctx.selected).map(dictationKey));
+                return sortDictationValues(dictationValues).some(value => {
+                    const key = dictationKey(value);
+                    if (query && !key.includes(query)) return false;
+                    if (which === 'edit' && selectedKeys.has(key)) return false;
+                    return true;
+                });
+            }
+
             function renderDictationCombo(which) {
                 const ctx = getDictationContext(which);
                 const selected = sortDictationValues(ctx.selected);
@@ -2082,8 +2094,15 @@
 
                 const selectedKeys = new Set(selected.map(dictationKey));
                 const query = dictationKey(ctx.input?.value || '');
-                const options = sortDictationValues(dictationValues)
+                const matchingOptions = sortDictationValues(dictationValues)
                     .filter(value => !query || dictationKey(value).includes(query));
+                // 编辑框只展示尚未选中的候选项；选完最后一项后菜单才真正为空。
+                const options = which === 'edit'
+                    ? matchingOptions.filter(value => !selectedKeys.has(dictationKey(value)))
+                    : matchingOptions;
+                const emptyText = query
+                    ? '无匹配选项，可按回车添加'
+                    : (which === 'edit' ? '暂无更多听写选项，按回车保存' : '暂无选项，可手动输入后按回车添加');
 
                 const canManage = which === 'add';
                 ctx.menu.innerHTML = options.length
@@ -2108,7 +2127,7 @@
                                 </span>
                             </div>`;
                     }).join('')
-                    : `<div class="dictation-empty">${query ? '无匹配选项，可按回车添加' : '暂无选项，可手动输入后按回车添加'}</div>`;
+                    : `<div class="dictation-empty">${emptyText}</div>`;
 
                 ctx.selectedEl.innerHTML = selected.map(value => `
                     <span class="dictation-chip">
@@ -2269,14 +2288,14 @@
                         event.stopPropagation();
 
                         // 编辑框：听写已选完、输入为空且下拉菜单没有可选项时，Enter 直接保存。
-                        if (which === 'edit' && !normalizeDictationValue(ctx.input.value)) {
-                            renderDictationCombo(which);
-                            const hasAvailableOption = !!ctx.menu.querySelector('.dictation-option');
-                            if (!hasAvailableOption) {
-                                closeDictationMenus();
-                                saveEdit();
-                                return;
-                            }
+                        if (
+                            which === 'edit' &&
+                            !normalizeDictationValue(ctx.input.value) &&
+                            !hasAvailableDictationOption(which)
+                        ) {
+                            closeDictationMenus();
+                            saveEdit();
+                            return;
                         }
 
                         commitDictationInput(which);
@@ -2307,6 +2326,11 @@
                     const option = event.target.closest('.dictation-option');
                     if (!option) return;
                     toggleDictationSelection(which, option.dataset.value || '');
+                    // 下拉重绘会销毁被点击的按钮；编辑框必须把焦点送回听写输入框，
+                    // 否则随后按 Enter 不会进入输入框的 keydown 保存逻辑。
+                    if (which === 'edit') {
+                        ctx.input.focus({ preventScroll: true });
+                    }
                 });
 
                 ctx.menu.addEventListener('keydown', event => {
@@ -2335,6 +2359,9 @@
                     } else if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         toggleDictationSelection(which, event.target.dataset.value || '');
+                        if (which === 'edit') {
+                            ctx.input.focus({ preventScroll: true });
+                        }
                     } else if (event.key === 'Escape') {
                         closeDictationMenus();
                         ctx.input.focus();
