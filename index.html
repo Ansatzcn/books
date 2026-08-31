@@ -12,7 +12,7 @@
         }
         body {
             background: #f5f7fa;
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            font-family: "Times New Roman", SimSun, "宋体", "Songti SC", STSong, serif;
             display: flex;
             justify-content: center;
             align-items: flex-start;
@@ -1046,7 +1046,7 @@
         }
 
     
-        /* ===== Books 最终主题 / 单列表 / 听写 / 回顶规则 ===== */
+        /* ===== Books 最终主题 / 单列表 / 组词 / 回顶规则 ===== */
 
         /* 主色与悬停色 */
         .toolbar .btn-sync,
@@ -1072,7 +1072,7 @@
             color: #1E40AF !important;
         }
 
-        /* 总表：单列；字词 1.1rem，其它 1rem；所有内容纯黑 */
+        /* 总表：单列；汉字 1.1rem，其它 1rem；所有内容纯黑 */
         .book-table,
         .book-table th,
         .book-table td,
@@ -1136,7 +1136,7 @@
             text-underline-offset: 2px;
         }
 
-        /* 听写组合下拉 */
+        /* 组词组合下拉 */
         .dictation-combobox {
             position: relative;
             width: 100%;
@@ -1216,7 +1216,7 @@
             font-weight: 650;
         }
 
-        /* 添加区听写候选项管理：主选项 + 改/删 */
+        /* 添加区组词候选项管理：主选项 + 改/删 */
         .dictation-option-row {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
@@ -1486,7 +1486,13 @@
             cursor: not-allowed;
         }
 
-    </style>
+    
+        /* 全页面统一使用宋体 */
+        html, body, button, input, textarea, select, option, table, th, td {
+            font-family: "Times New Roman", SimSun, "宋体", "Songti SC", STSong, serif !important;
+        }
+
+</style>
 </head>
 <body>
     <div class="container">
@@ -1515,7 +1521,7 @@
             <h2>添加</h2>
             <div class="form-grid">
                 <div class="form-group full-width">
-                    <label for="titleInput">字词</label>
+                    <label for="titleInput">汉字</label>
                     <input type="text" id="titleInput" autofocus>
                 </div>
                 <div class="form-group full-width">
@@ -1536,7 +1542,7 @@
                     </div>
                 </div>
                 <div class="form-group full-width">
-                    <label for="dictationInput">听写</label>
+                    <label for="dictationInput">组词</label>
                     <div class="dictation-combobox" id="dictationCombo">
                         <div class="dictation-primary-row">
                             <input
@@ -1547,7 +1553,7 @@
                                 aria-expanded="false"
                                 aria-controls="dictationDropdown"
                             >
-                            <button type="button" class="dictation-toggle" id="dictationToggle" aria-label="展开听写选项" title="展开听写选项">▾</button>
+                            <button type="button" class="dictation-toggle" id="dictationToggle" aria-label="展开组词选项" title="展开组词选项">▾</button>
                         </div>
                         <div class="dictation-menu" id="dictationDropdown" role="listbox"></div>
                         <div class="dictation-selected" id="dictationSelected" aria-live="polite"></div>
@@ -1565,7 +1571,7 @@
             <table class="book-table" id="bookTable">
                 <thead>
                     <tr>
-                        <th>字词</th>
+                        <th>汉字</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -1581,9 +1587,9 @@
     <div class="modal-overlay hidden" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editModalHeading">
         <div class="modal-box">
             <h3 id="editModalHeading">编辑条目</h3>
-            <div class="modal-sub">字词：<span id="editTitleDisplay"></span></div>
+            <div class="modal-sub">汉字：<span id="editTitleDisplay"></span></div>
             <div class="form-group">
-                <label for="editTitleInput">字词</label>
+                <label for="editTitleInput">汉字</label>
                 <input type="text" id="editTitleInput">
             </div>
             <div class="form-group">
@@ -1604,7 +1610,7 @@
                 </div>
             </div>
             <div class="form-group">
-                <label for="editDictationInput">听写</label>
+                <label for="editDictationInput">组词</label>
                 <div class="dictation-combobox" id="editDictationCombo">
                     <div class="dictation-primary-row">
                         <input
@@ -1615,7 +1621,7 @@
                             aria-expanded="false"
                             aria-controls="editDictationDropdown"
                         >
-                        <button type="button" class="dictation-toggle" id="editDictationToggle" aria-label="展开听写选项" title="展开听写选项">▾</button>
+                        <button type="button" class="dictation-toggle" id="editDictationToggle" aria-label="展开组词选项" title="展开组词选项">▾</button>
                     </div>
                     <div class="dictation-menu" id="editDictationDropdown" role="listbox"></div>
                     <div class="dictation-selected" id="editDictationSelected" aria-live="polite"></div>
@@ -2029,7 +2035,7 @@
                 editCategoryInput.setAttribute('aria-expanded', 'false');
             }
 
-            // ---------- 听写下拉：无预设，用户手动添加；候选项和条目内均按中文拼音首字母排序 ----------
+            // ---------- 组词下拉：无预设，用户手动添加；候选项和条目内均按中文拼音首字母排序 ----------
             const dictationCollator = new Intl.Collator('zh-CN-u-co-pinyin', {
                 usage: 'sort',
                 sensitivity: 'base',
@@ -2102,7 +2108,7 @@
                             ).filter(value => !excludedDictationKeys.has(dictationKey(value)));
                         }
                     } catch (error) {
-                        console.error('听写选项解析失败:', error);
+                        console.error('组词选项解析失败:', error);
                     }
                 }
                 renderDictationCombo('add');
@@ -2163,7 +2169,7 @@
                     : matchingOptions;
                 const emptyText = query
                     ? '无匹配选项，可按回车添加'
-                    : (which === 'edit' ? '暂无更多听写选项，按回车保存' : '暂无选项，可手动输入后按回车添加');
+                    : (which === 'edit' ? '暂无更多组词选项，按回车保存' : '暂无选项，可手动输入后按回车添加');
 
                 const canManage = which === 'add';
                 ctx.menu.innerHTML = options.length
@@ -2193,7 +2199,7 @@
                 ctx.selectedEl.innerHTML = selected.map(value => `
                     <span class="dictation-chip">
                         <span>${escapeHtml(value)}</span>
-                        <button type="button" class="dictation-chip-remove" data-value="${escapeAttribute(value)}" aria-label="移除听写 ${escapeAttribute(value)}">×</button>
+                        <button type="button" class="dictation-chip-remove" data-value="${escapeAttribute(value)}" aria-label="移除组词 ${escapeAttribute(value)}">×</button>
                     </span>
                 `).join('');
             }
@@ -2245,12 +2251,12 @@
                 const oldValue = normalizeDictationValue(value);
                 if (!oldValue) return;
 
-                const prompted = prompt('修改听写：', oldValue);
+                const prompted = prompt('修改组词：', oldValue);
                 if (prompted === null) return;
 
                 const newValue = normalizeDictationValue(prompted);
                 if (!newValue) {
-                    showToast('听写名称不能为空', 'error');
+                    showToast('组词名称不能为空', 'error');
                     return;
                 }
 
@@ -2310,17 +2316,17 @@
                     item => Array.isArray(item.dictation) && item.dictation.some(entry => dictationKey(entry) === key)
                 ).length;
                 const usageNote = usedCount
-                    ? `\n\n当前有 ${usedCount} 个条目使用该听写；这些条目会保留原文字。`
+                    ? `\n\n当前有 ${usedCount} 个条目使用该组词；这些条目会保留原文字。`
                     : '';
 
-                if (!confirm(`确定从听写下拉菜单删除“${normalized}”吗？${usageNote}`)) return;
+                if (!confirm(`确定从组词下拉菜单删除“${normalized}”吗？${usageNote}`)) return;
 
                 dictationValues = dictationValues.filter(entry => dictationKey(entry) !== key);
                 excludedDictationKeys.add(key);
                 saveDictationOptions();
                 renderDictationCombo('add');
                 renderDictationCombo('edit');
-                showToast(`已从听写候选项删除“${normalized}”`, 'success');
+                showToast(`已从组词候选项删除“${normalized}”`, 'success');
             }
 
             function setupDictationCombobox(which) {
@@ -2348,7 +2354,7 @@
                         event.preventDefault();
                         event.stopPropagation();
 
-                        // 编辑框：只要听写输入字段为空，Enter 就直接保存。
+                        // 编辑框：只要组词输入字段为空，Enter 就直接保存。
                         // 不再依赖下拉菜单是否还有候选项，避免候选历史阻止保存。
                         if (which === 'edit' && !normalizeDictationValue(ctx.input.value)) {
                             closeDictationMenus();
@@ -2384,7 +2390,7 @@
                     const option = event.target.closest('.dictation-option');
                     if (!option) return;
                     toggleDictationSelection(which, option.dataset.value || '');
-                    // 下拉重绘会销毁被点击的按钮；编辑框必须把焦点送回听写输入框，
+                    // 下拉重绘会销毁被点击的按钮；编辑框必须把焦点送回组词输入框，
                     // 否则随后按 Enter 不会进入输入框的 keydown 保存逻辑。
                     if (which === 'edit') {
                         ctx.input.focus({ preventScroll: true });
@@ -2630,7 +2636,7 @@
                 }
 
                 if (raw.startsWith('[') || raw.includes('](')) {
-                    throw new Error('字词格式不完整，请使用：[字词](https://网址)');
+                    throw new Error('汉字格式不完整，请使用：[汉字](https://网址)');
                 }
 
                 return { title: raw, url: '' };
@@ -2715,8 +2721,8 @@
             }
 
             // ---------- 排序 ----------
-            // 列表固定按“字词首字”的汉语拼音升序排列。
-            // 首字拼音相同时，再按完整字词的拼音顺序比较，保证排序稳定。
+            // 列表固定按“汉字首字”的汉语拼音升序排列。
+            // 首字拼音相同时，再按完整汉字的拼音顺序比较，保证排序稳定。
             const titleCollator = new Intl.Collator('zh-CN-u-co-pinyin', {
                 usage: 'sort',
                 sensitivity: 'base',
@@ -3350,7 +3356,7 @@
                 }
 
                 if (!parsed) {
-                    alert('请填写“字词”字段。');
+                    alert('请填写“汉字”字段。');
                     titleInput.focus();
                     return;
                 }
@@ -3444,7 +3450,7 @@
                 }
 
                 if (!parsed) {
-                    alert('请填写“字词”字段。');
+                    alert('请填写“汉字”字段。');
                     editTitleInput.focus();
                     return;
                 }
