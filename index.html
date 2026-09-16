@@ -1551,10 +1551,26 @@
             cursor: pointer;
         }
 
+        .book-table .book-meta-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: end;
+            gap: .8rem;
+            width: 100%;
+        }
+
         .book-table .book-category {
-            margin-top: .45rem;
+            align-self: end;
+            margin: 0;
+            padding-bottom: 0;
             text-align: right;
             color: #000 !important;
+            line-height: 1.5;
+            white-space: nowrap;
+        }
+
+        .book-table .book-meta-row .book-dictation {
+            min-width: 0;
         }
 
         .book-table .edit-btn,
@@ -3509,6 +3525,10 @@
                         ? `<div class="book-meta book-category">${category}</div>`
                         : '';
 
+                    const metaHtml = dictationHtml || categoryHtml
+                        ? `<div class="book-meta-row">${dictationHtml}<div>${categoryHtml}</div></div>`
+                        : '';
+
                     return `
                         <tr data-index="${index}">
                             <td class="book-entry">
@@ -3516,8 +3536,7 @@
                                     <div class="book-title-text">${titleHtml}</div>
                                     <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
                                 </div>
-                                ${dictationHtml}
-                                ${categoryHtml}
+                                ${metaHtml}
                             </td>
                         </tr>
                     `;
