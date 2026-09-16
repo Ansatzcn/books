@@ -13,7 +13,7 @@
         }
         body {
             background: #f5f7fa;
-            font-family: "Times New Roman", SimSun, "宋体", "Songti SC", STSong, serif;
+            font-family: "Times New Roman", "Microsoft YaHei", "微软雅黑", sans-serif;
             display: flex;
             justify-content: center;
             align-items: flex-start;
@@ -1137,13 +1137,14 @@
             color: #94a3b8 !important;
             font-size: 0.9rem !important;
             font-weight: 400 !important;
-            text-decoration: none !important;
+            text-decoration: underline !important;
+            text-underline-offset: 2px;
         }
 
         .book-table .edit-btn:hover,
         .book-table .edit-btn:focus-visible {
             color: #64748b !important;
-            text-decoration: none !important;
+            text-decoration: underline !important;
         }
 
         /* 组词组合下拉 */
@@ -1497,9 +1498,9 @@
         }
 
     
-        /* 全页面统一使用宋体 */
+        /* 全页面统一字体：英文与数字优先 Times New Roman；汉字回退到微软雅黑。 */
         html, body, button, input, textarea, select, option, table, th, td {
-            font-family: "Times New Roman", SimSun, "宋体", "Songti SC", STSong, serif !important;
+            font-family: "Times New Roman", "Microsoft YaHei", "微软雅黑", sans-serif !important;
         }
 
 
@@ -1564,9 +1565,21 @@
             margin: 0;
             padding-bottom: 0;
             text-align: right;
-            color: #000 !important;
+            color: #94a3b8 !important;
+            font-size: .9rem !important;
             line-height: 1.5;
             white-space: nowrap;
+        }
+
+        .book-table .book-meta-left {
+            min-width: 0;
+        }
+
+        .book-table .book-meta-right {
+            min-width: 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
         }
 
         .book-table .book-meta-row .book-dictation {
@@ -1579,7 +1592,8 @@
             color: #94a3b8 !important;
             font-size: .9rem !important;
             font-weight: 400 !important;
-            text-decoration: none !important;
+            text-decoration: underline !important;
+            text-underline-offset: 2px;
         }
 
 </style>
@@ -3526,7 +3540,7 @@
                         : '';
 
                     const metaHtml = dictationHtml || categoryHtml
-                        ? `<div class="book-meta-row">${dictationHtml}<div>${categoryHtml}</div></div>`
+                        ? `<div class="book-meta-row"><div class="book-meta-left">${dictationHtml}</div><div class="book-meta-right">${categoryHtml}</div></div>`
                         : '';
 
                     return `
