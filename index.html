@@ -1571,6 +1571,12 @@
             white-space: nowrap;
         }
 
+        .book-table .book-title-row .book-category {
+            flex: 0 0 auto;
+            align-self: baseline;
+            margin-left: auto;
+        }
+
         .book-table .book-meta-left {
             min-width: 0;
         }
@@ -1589,7 +1595,7 @@
         .book-table .edit-btn,
         .book-table .edit-btn:hover,
         .book-table .edit-btn:focus-visible {
-            color: #94a3b8 !important;
+            color: #000 !important;
             font-size: .9rem !important;
             font-weight: 400 !important;
             text-decoration: underline !important;
@@ -3538,17 +3544,15 @@
                     const categoryHtml = category
                         ? `<div class="book-meta book-category">${category}</div>`
                         : '';
-
-                    const metaHtml = dictationHtml || categoryHtml
-                        ? `<div class="book-meta-row"><div class="book-meta-left">${dictationHtml}</div><div class="book-meta-right">${categoryHtml}</div></div>`
-                        : '';
+                    const editHtml = `<button class="action-btn edit-btn" data-index="${index}" title="编辑">${category}</button>`;
+                    const metaHtml = `<div class="book-meta-row"><div class="book-meta-left">${dictationHtml}</div><div class="book-meta-right">${editHtml}</div></div>`;
 
                     return `
                         <tr data-index="${index}">
                             <td class="book-entry">
                                 <div class="book-title-row">
                                     <div class="book-title-text">${titleHtml}</div>
-                                    <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
+                                    ${categoryHtml}
                                 </div>
                                 ${metaHtml}
                             </td>
