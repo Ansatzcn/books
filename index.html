@@ -1126,6 +1126,7 @@
         .book-table .book-dictation,
         .book-table .book-dictation * {
             color: #1E40AF !important;
+            font-weight: 700 !important;
         }
 
         .book-table .edit-btn {
@@ -1133,8 +1134,16 @@
             padding: 0 !important;
             background: transparent !important;
             border: 0 !important;
-            text-decoration: underline;
-            text-underline-offset: 2px;
+            color: #94a3b8 !important;
+            font-size: 0.9rem !important;
+            font-weight: 400 !important;
+            text-decoration: none !important;
+        }
+
+        .book-table .edit-btn:hover,
+        .book-table .edit-btn:focus-visible {
+            color: #64748b !important;
+            text-decoration: none !important;
         }
 
         /* 组词组合下拉 */
@@ -1493,6 +1502,70 @@
             font-family: "Times New Roman", SimSun, "宋体", "Songti SC", STSong, serif !important;
         }
 
+
+
+        /* ===== Books 总表最终展示：汉字 / 组词 / 分类 / 编辑 ===== */
+        .book-table .book-title-text,
+        .book-table .book-title-text *,
+        .book-table .book-title-text a {
+            color: #1E40AF !important;
+            font-weight: 700 !important;
+        }
+
+        .book-table .book-title-text a:hover,
+        .book-table .book-title-text a:focus-visible {
+            color: #1E3A8A !important;
+        }
+
+        .book-table .book-dictation,
+        .book-table .book-dictation * {
+            color: #000 !important;
+            font-weight: 400 !important;
+        }
+
+        .book-table .book-dictation {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .22rem;
+            margin-top: .38rem;
+        }
+
+        .book-table .book-dictation-item {
+            display: flex;
+            align-items: flex-start;
+            gap: .48rem;
+            width: 100%;
+            margin: 0;
+            color: #000 !important;
+            line-height: 1.5;
+            cursor: pointer;
+        }
+
+        .book-table .book-dictation-check {
+            flex: 0 0 auto;
+            width: 15px;
+            height: 15px;
+            margin: .18em 0 0;
+            accent-color: #000;
+            cursor: pointer;
+        }
+
+        .book-table .book-category {
+            margin-top: .45rem;
+            text-align: right;
+            color: #000 !important;
+        }
+
+        .book-table .edit-btn,
+        .book-table .edit-btn:hover,
+        .book-table .edit-btn:focus-visible {
+            color: #94a3b8 !important;
+            font-size: .9rem !important;
+            font-weight: 400 !important;
+            text-decoration: none !important;
+        }
+
 </style>
 </head>
 <body>
@@ -1526,23 +1599,6 @@
                     <input type="text" id="titleInput" autofocus>
                 </div>
                 <div class="form-group full-width">
-                    <label for="categoryInput">分类</label>
-                    <div class="category-combobox">
-                        <input
-                            type="text"
-                            id="categoryInput"
-                            autocomplete="off"
-                            role="combobox"
-                            aria-autocomplete="list"
-                            aria-expanded="false"
-                            aria-controls="categoryDropdown"
-                           
-                        >
-                        <button type="button" class="category-toggle" id="categoryToggle" aria-label="展开分类选项" title="展开分类选项">▼</button>
-                        <div class="category-menu" id="categoryDropdown" role="listbox"></div>
-                    </div>
-                </div>
-                <div class="form-group full-width">
                     <label for="dictationInput">组词</label>
                     <div class="dictation-combobox" id="dictationCombo">
                         <div class="dictation-primary-row">
@@ -1558,6 +1614,23 @@
                         </div>
                         <div class="dictation-menu" id="dictationDropdown" role="listbox"></div>
                         <div class="dictation-selected" id="dictationSelected" aria-live="polite"></div>
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="categoryInput">分类</label>
+                    <div class="category-combobox">
+                        <input
+                            type="text"
+                            id="categoryInput"
+                            autocomplete="off"
+                            role="combobox"
+                            aria-autocomplete="list"
+                            aria-expanded="false"
+                            aria-controls="categoryDropdown"
+                           
+                        >
+                        <button type="button" class="category-toggle" id="categoryToggle" aria-label="展开分类选项" title="展开分类选项">▼</button>
+                        <div class="category-menu" id="categoryDropdown" role="listbox"></div>
                     </div>
                 </div>
                 <button class="btn-primary" id="addBtn">添加</button>
@@ -3420,17 +3493,20 @@
                 tableBody.innerHTML = books.map((item, index) => {
                     const title = escapeHtml(item.title);
                     const category = escapeHtml(item.category || '');
-                    const dictation = sortDictationValues(item.dictation || [])
-                        .map(escapeHtml)
-                        .join('、');
+                    const dictationItems = sortDictationValues(item.dictation || []);
                     const titleHtml = item.url
                         ? `<a href="${escapeAttribute(item.url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
                         : title;
+                    const dictationHtml = dictationItems.length
+                        ? `<div class="book-meta book-dictation">${dictationItems.map(value => `
+                            <label class="book-dictation-item">
+                                <input class="book-dictation-check" type="checkbox" aria-label="勾选 ${escapeAttribute(value)}">
+                                <span>${escapeHtml(value)}</span>
+                            </label>
+                        `).join('')}</div>`
+                        : '';
                     const categoryHtml = category
                         ? `<div class="book-meta book-category">${category}</div>`
-                        : '';
-                    const dictationHtml = dictation
-                        ? `<div class="book-meta book-dictation">${dictation}</div>`
                         : '';
 
                     return `
@@ -3440,8 +3516,8 @@
                                     <div class="book-title-text">${titleHtml}</div>
                                     <button class="action-btn edit-btn" data-index="${index}" title="编辑">编辑</button>
                                 </div>
-                                ${categoryHtml}
                                 ${dictationHtml}
+                                ${categoryHtml}
                             </td>
                         </tr>
                     `;
