@@ -1553,41 +1553,10 @@
         }
 
         .book-table .book-meta-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            align-items: end;
-            gap: .8rem;
             width: 100%;
         }
 
-        .book-table .book-category {
-            align-self: end;
-            margin: 0;
-            padding-bottom: 0;
-            text-align: right;
-            color: #94a3b8 !important;
-            font-size: .9rem !important;
-            line-height: 1.5;
-            white-space: nowrap;
-        }
-
-        .book-table .book-title-row .book-category {
-            flex: 0 0 auto;
-            align-self: baseline;
-            margin-left: auto;
-        }
-
-        .book-table .book-meta-left {
-            min-width: 0;
-        }
-
-        .book-table .book-meta-right {
-            min-width: 0;
-            display: flex;
-            align-items: flex-end;
-            justify-content: flex-end;
-        }
-
+        .book-table .book-meta-left,
         .book-table .book-meta-row .book-dictation {
             min-width: 0;
         }
@@ -3541,18 +3510,17 @@
                             </label>
                         `).join('')}</div>`
                         : '';
-                    const categoryHtml = category
-                        ? `<div class="book-meta book-category">${category}</div>`
-                        : '';
                     const editHtml = `<button class="action-btn edit-btn" data-index="${index}" title="编辑">${category}</button>`;
-                    const metaHtml = `<div class="book-meta-row"><div class="book-meta-left">${dictationHtml}</div><div class="book-meta-right">${editHtml}</div></div>`;
+                    const metaHtml = dictationHtml
+                        ? `<div class="book-meta-row"><div class="book-meta-left">${dictationHtml}</div></div>`
+                        : '';
 
                     return `
                         <tr data-index="${index}">
                             <td class="book-entry">
                                 <div class="book-title-row">
                                     <div class="book-title-text">${titleHtml}</div>
-                                    ${categoryHtml}
+                                    ${editHtml}
                                 </div>
                                 ${metaHtml}
                             </td>
