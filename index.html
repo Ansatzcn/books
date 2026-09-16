@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="app-build" content="2026-09-17-books-zero-webstorage-v1">
     <title>Books</title>
     <style>
         * {
@@ -1641,7 +1642,7 @@
             <div class="config-scroll" id="configScroll">
             <h3 id="configModalHeading">GitHub 云端配置</h3>
             <div class="config-desc">
-                本网页按当前网址路径独立保存本地图书、配置、同步状态和冲突备份，不会读取其他仓库页面的数据。
+                本网页按当前网址路径使用 IndexedDB 保存配置、同步状态、候选项与冲突备份，并用 IndexedDB + OPFS 双层保存图书工作副本；不会读取其他仓库页面的数据。
             </div>
             <div class="form-group">
                 <label for="cfgToken">GitHub Personal Access Token *</label>
@@ -1718,14 +1719,17 @@
             const PAGE_INSTANCE_ID = hashIdentity(getPageInstanceIdentity());
             const STORAGE_NAMESPACE = `books_catalog:${PAGE_INSTANCE_ID}`;
             const CONFIG_KEY = `${STORAGE_NAMESPACE}:config`;
-            const TOKEN_KEY = `${STORAGE_NAMESPACE}:token_local`;
-            const LEGACY_TOKEN_SESSION_KEY = `${STORAGE_NAMESPACE}:token_session`;
+            const TOKEN_KEY = `${STORAGE_NAMESPACE}:token`;
             const CATEGORY_OPTIONS_KEY = `${STORAGE_NAMESPACE}:category_options`;
             const DICTATION_OPTIONS_KEY = `${STORAGE_NAMESPACE}:dictation_options_v1`;
             const STORAGE_KEY = `${STORAGE_NAMESPACE}:books`;
             const SYNC_SCHEMA_VERSION = 1;
             const SYNC_META_KEY = `${STORAGE_NAMESPACE}:sync_meta_v1`;
             const CONFLICT_BACKUP_KEY = `${STORAGE_NAMESPACE}:conflict_backups_v1`;
+            const APP_DB_NAME = 'books_app_v2';
+            const APP_DB_VERSION = 1;
+            const APP_STORE = 'kv';
+            const WORK_OPFS_FILE = `books_${PAGE_INSTANCE_ID}_working_v2.json`;
             const MAX_CONFLICT_BACKUPS = 10;
             const MAX_SYNC_BYTES = 750 * 1024;
             const AUTO_SYNC_DELAY = 700;
@@ -1807,63 +1811,172 @@
             const toast = document.getElementById('toast');
             let toastTimer = null;
 
-            // ---------- 存储工具 ----------
-            function safeLocalGet(key) {
+            // ---------- IndexedDB + OPFS 本机持久化 ----------
+            const appCache = new Map();
+            let appDbPromise = null;
+            let appWriteChain = Promise.resolve();
+            let workingCopyOpfsRecord = null;
+            let workingCopyOpfsWriteChain = Promise.resolve();
+
+            function openAppDb() {
+                if (appDbPromise) return appDbPromise;
+                appDbPromise = new Promise((resolve, reject) => {
+                    if (!('indexedDB' in window)) {
+                        reject(new Error('当前浏览器不支持 IndexedDB'));
+                        return;
+                    }
+                    const request = indexedDB.open(APP_DB_NAME, APP_DB_VERSION);
+                    request.onupgradeneeded = () => {
+                        const db = request.result;
+                        if (!db.objectStoreNames.contains(APP_STORE)) {
+                            db.createObjectStore(APP_STORE, { keyPath: 'key' });
+                        }
+                    };
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error || new Error('IndexedDB 打开失败'));
+                });
+                return appDbPromise;
+            }
+
+            function enqueueAppPut(key, value) {
+                appWriteChain = appWriteChain.catch(() => {}).then(async () => {
+                    const db = await openAppDb();
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction(APP_STORE, 'readwrite');
+                        tx.objectStore(APP_STORE).put({ key: String(key), value: String(value) });
+                        tx.oncomplete = () => resolve();
+                        tx.onerror = () => reject(tx.error || new Error('IndexedDB 写入失败'));
+                        tx.onabort = () => reject(tx.error || new Error('IndexedDB 写入中止'));
+                    });
+                });
+                return appWriteChain;
+            }
+
+            function enqueueAppDelete(key) {
+                appWriteChain = appWriteChain.catch(() => {}).then(async () => {
+                    const db = await openAppDb();
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction(APP_STORE, 'readwrite');
+                        tx.objectStore(APP_STORE).delete(String(key));
+                        tx.oncomplete = () => resolve();
+                        tx.onerror = () => reject(tx.error || new Error('IndexedDB 删除失败'));
+                        tx.onabort = () => reject(tx.error || new Error('IndexedDB 删除中止'));
+                    });
+                });
+                return appWriteChain;
+            }
+
+            function appGet(key) {
+                return appCache.has(String(key)) ? appCache.get(String(key)) : null;
+            }
+
+            function appSet(key, value) {
+                const normalizedKey = String(key);
+                const normalizedValue = String(value);
+                appCache.set(normalizedKey, normalizedValue);
+                return enqueueAppPut(normalizedKey, normalizedValue).catch(error => {
+                    console.error('IndexedDB 持久化失败:', error);
+                    showToast(`本机保存失败：${error.message}`, 'error');
+                    return false;
+                });
+            }
+
+            function appDelete(key) {
+                const normalizedKey = String(key);
+                appCache.delete(normalizedKey);
+                return enqueueAppDelete(normalizedKey).catch(error => {
+                    console.error('IndexedDB 删除失败:', error);
+                    return false;
+                });
+            }
+
+            async function readWorkingCopyOpfs() {
+                if (!navigator.storage?.getDirectory) return null;
                 try {
-                    return localStorage.getItem(key);
+                    const root = await navigator.storage.getDirectory();
+                    const handle = await root.getFileHandle(WORK_OPFS_FILE);
+                    const file = await handle.getFile();
+                    const record = JSON.parse(await file.text());
+                    return record && typeof record === 'object' && typeof record.cacheJson === 'string'
+                        ? record
+                        : null;
                 } catch (error) {
-                    console.error('读取本地存储失败:', error);
                     return null;
                 }
             }
 
-            function safeLocalSet(key, value) {
-                try {
-                    localStorage.setItem(key, value);
+            function queueWorkingCopyOpfsWrite(snapshot = books) {
+                const normalized = normalizeBookList(snapshot);
+                const record = {
+                    savedAt: Date.now(),
+                    fingerprint: getBooksFingerprint(normalized),
+                    cacheJson: JSON.stringify(normalized)
+                };
+                workingCopyOpfsRecord = record;
+                workingCopyOpfsWriteChain = workingCopyOpfsWriteChain.catch(() => {}).then(async () => {
+                    if (!navigator.storage?.getDirectory) return false;
+                    const root = await navigator.storage.getDirectory();
+                    const handle = await root.getFileHandle(WORK_OPFS_FILE, { create: true });
+                    const writable = await handle.createWritable();
+                    await writable.write(JSON.stringify(record));
+                    await writable.close();
                     return true;
-                } catch (error) {
-                    console.error('写入本地存储失败:', error);
-                    showToast(`本地保存失败：${error.message}`, 'error');
+                }).catch(error => {
+                    console.warn('OPFS 工作副本写入失败:', error);
                     return false;
+                });
+                return workingCopyOpfsWriteChain;
+            }
+
+            async function initAppStorage() {
+                const db = await openAppDb();
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(APP_STORE, 'readonly');
+                    const request = tx.objectStore(APP_STORE).getAll();
+                    request.onsuccess = () => {
+                        appCache.clear();
+                        for (const row of request.result || []) {
+                            appCache.set(String(row.key), String(row.value ?? ''));
+                        }
+                        resolve();
+                    };
+                    request.onerror = () => reject(request.error || new Error('IndexedDB 读取失败'));
+                });
+
+                try {
+                    if (navigator.storage?.persist) await navigator.storage.persist();
+                } catch (error) {}
+
+                workingCopyOpfsRecord = await readWorkingCopyOpfs();
+                if (appGet(STORAGE_KEY) === null && workingCopyOpfsRecord?.cacheJson) {
+                    appCache.set(STORAGE_KEY, String(workingCopyOpfsRecord.cacheJson));
+                    await enqueueAppPut(STORAGE_KEY, String(workingCopyOpfsRecord.cacheJson));
                 }
             }
 
-            function safeLocalRemove(key) {
-                try {
-                    localStorage.removeItem(key);
-                    return true;
-                } catch (error) {
-                    console.error('删除本地存储失败:', error);
-                    return false;
-                }
+            function saveWorkingCopy(snapshot = books) {
+                const normalized = normalizeBookList(snapshot);
+                const json = JSON.stringify(normalized);
+                appCache.set(STORAGE_KEY, json);
+                enqueueAppPut(STORAGE_KEY, json).catch(error => {
+                    console.error('IndexedDB 工作副本写入失败:', error);
+                    showToast(`本机工作副本保存失败：${error.message}`, 'error');
+                });
+                queueWorkingCopyOpfsWrite(normalized);
+                return normalized;
             }
 
-            function safeSessionGet(key) {
-                try {
-                    return sessionStorage.getItem(key);
-                } catch (error) {
-                    return null;
+            async function persistWorkingCopyNow(snapshot = books) {
+                const normalized = normalizeBookList(snapshot);
+                const json = JSON.stringify(normalized);
+                appCache.set(STORAGE_KEY, json);
+                const idbWrite = enqueueAppPut(STORAGE_KEY, json);
+                const opfsWrite = queueWorkingCopyOpfsWrite(normalized);
+                const results = await Promise.allSettled([idbWrite, opfsWrite]);
+                if (results[0].status === 'rejected') {
+                    throw results[0].reason || new Error('IndexedDB 工作副本写入失败');
                 }
-            }
-
-            function safeSessionSet(key, value) {
-                try {
-                    sessionStorage.setItem(key, value);
-                    return true;
-                } catch (error) {
-                    showToast(`Token 临时保存失败：${error.message}`, 'error');
-                    return false;
-                }
-            }
-
-            function safeSessionRemove(key) {
-                try {
-                    sessionStorage.removeItem(key);
-                    return true;
-                } catch (error) {
-                    console.error('删除会话存储失败:', error);
-                    return false;
-                }
+                return normalized;
             }
 
             // ---------- 分类下拉选项 ----------
@@ -1958,14 +2071,14 @@
             }
 
             function saveCategoryOptions() {
-                safeLocalSet(CATEGORY_OPTIONS_KEY, JSON.stringify({
+                appSet(CATEGORY_OPTIONS_KEY, JSON.stringify({
                     values: categoryValues,
                     excluded: [...excludedCategoryKeys]
                 }));
             }
 
             function loadCategoryOptions() {
-                const stored = safeLocalGet(CATEGORY_OPTIONS_KEY);
+                const stored = appGet(CATEGORY_OPTIONS_KEY);
                 categoryValues = [];
                 excludedCategoryKeys = new Set();
 
@@ -2081,7 +2194,7 @@
             function saveDictationOptions() {
                 dictationValues = sortDictationValues(dictationValues)
                     .filter(value => !excludedDictationKeys.has(dictationKey(value)));
-                safeLocalSet(DICTATION_OPTIONS_KEY, JSON.stringify({
+                appSet(DICTATION_OPTIONS_KEY, JSON.stringify({
                     values: dictationValues,
                     excluded: [...excludedDictationKeys]
                 }));
@@ -2090,7 +2203,7 @@
             function loadDictationOptions() {
                 dictationValues = [];
                 excludedDictationKeys = new Set();
-                const stored = safeLocalGet(DICTATION_OPTIONS_KEY);
+                const stored = appGet(DICTATION_OPTIONS_KEY);
                 if (stored) {
                     try {
                         const parsed = JSON.parse(stored);
@@ -2756,7 +2869,7 @@
 
             // ---------- 配置 ----------
             function loadConfig() {
-                const stored = safeLocalGet(CONFIG_KEY);
+                const stored = appGet(CONFIG_KEY);
                 let parsed = {};
                 if (stored) {
                     try {
@@ -2766,16 +2879,13 @@
                     }
                 }
 
-                const storedLocalToken = safeLocalGet(TOKEN_KEY) || '';
-                const storedSessionToken = safeSessionGet(LEGACY_TOKEN_SESSION_KEY) || '';
+                const storedToken = appGet(TOKEN_KEY) || '';
                 const rememberToken = typeof parsed.rememberToken === 'boolean'
                     ? parsed.rememberToken
-                    : Boolean(storedLocalToken);
+                    : Boolean(storedToken);
 
                 config = {
-                    token: rememberToken
-                        ? (storedLocalToken || storedSessionToken)
-                        : (storedSessionToken || ''),
+                    token: rememberToken ? storedToken : '',
                     rememberToken,
                     owner: typeof parsed.owner === 'string' ? parsed.owner : '',
                     repo: typeof parsed.repo === 'string' ? parsed.repo : '',
@@ -2799,19 +2909,17 @@
                 config.file = cfgFile.value.trim() || 'books_data.json';
 
                 if (config.rememberToken) {
-                    safeLocalSet(TOKEN_KEY, config.token);
-                    safeSessionRemove(LEGACY_TOKEN_SESSION_KEY);
+                    appSet(TOKEN_KEY, config.token).catch(() => {});
                 } else {
-                    safeLocalRemove(TOKEN_KEY);
-                    safeSessionSet(LEGACY_TOKEN_SESSION_KEY, config.token);
+                    appDelete(TOKEN_KEY).catch(() => {});
                 }
 
-                safeLocalSet(CONFIG_KEY, JSON.stringify({
+                appSet(CONFIG_KEY, JSON.stringify({
                     rememberToken: config.rememberToken,
                     owner: config.owner,
                     repo: config.repo,
                     file: config.file
-                }));
+                })).catch(() => {});
             }
 
             function isConfigValid() {
@@ -2834,7 +2942,7 @@
             }
 
             function loadSyncMeta() {
-                const stored = safeLocalGet(SYNC_META_KEY);
+                const stored = appGet(SYNC_META_KEY);
                 if (!stored) {
                     syncMeta = createEmptySyncMeta();
                     return;
@@ -2863,7 +2971,7 @@
             }
 
             function saveSyncMeta() {
-                safeLocalSet(SYNC_META_KEY, JSON.stringify(syncMeta));
+                appSet(SYNC_META_KEY, JSON.stringify(syncMeta));
                 updateLastSyncDisplay();
             }
 
@@ -3007,7 +3115,7 @@
 
             // ---------- 后台冲突备份 ----------
             function loadConflictBackups() {
-                const stored = safeLocalGet(CONFLICT_BACKUP_KEY);
+                const stored = appGet(CONFLICT_BACKUP_KEY);
                 if (!stored) return [];
                 try {
                     const parsed = JSON.parse(stored);
@@ -3034,7 +3142,7 @@
                     target: getSyncTarget(),
                     books: normalizeBookList(snapshot)
                 });
-                safeLocalSet(
+                appSet(
                     CONFLICT_BACKUP_KEY,
                     JSON.stringify(backups.slice(-MAX_CONFLICT_BACKUPS))
                 );
@@ -3276,15 +3384,15 @@
                 scheduleAutoSync();
             }
 
-            // ---------- 本地存储 ----------
-            function loadFromLocal() {
-                const stored = safeLocalGet(STORAGE_KEY);
+            // ---------- 本机正式工作副本 ----------
+            function loadWorkingCopy() {
+                const stored = appGet(STORAGE_KEY);
                 hasStoredLocalData = stored !== null;
                 if (stored !== null) {
                     try {
                         books = normalizeBookList(JSON.parse(stored));
                     } catch (error) {
-                        console.error('本地图书数据解析失败:', error);
+                        console.error('本机图书工作副本解析失败:', error);
                         books = [];
                     }
                 } else {
@@ -3293,17 +3401,13 @@
                 applySortAndRender();
             }
 
-            function saveToLocal() {
-                safeLocalSet(STORAGE_KEY, JSON.stringify(books));
-            }
-
             // ---------- 渲染 ----------
             function applySortAndRender() {
                 sortBooks();
                 syncCategoryOptionsFromBooks();
                 syncDictationOptionsFromBooks();
                 renderTable();
-                saveToLocal();
+                saveWorkingCopy(books);
             }
 
             function renderTable() {
@@ -3917,20 +4021,29 @@
             });
 
             // ---------- 初始化 ----------
-            loadConfig();
-            loadSyncMeta();
-            loadCategoryOptions();
-            loadDictationOptions();
-            loadFromLocal();
-            updateLastSyncDisplay();
-            updateBackToTopVisibility();
+            (async () => {
+                try {
+                    await initAppStorage();
+                } catch (error) {
+                    console.error('Books 本机持久化初始化失败:', error);
+                    showToast(`本机持久化初始化失败：${error.message}`, 'error');
+                }
 
-            if (isConfigValid()) {
-                ensureSyncTarget();
-                syncToCloud(false, false);
-            } else {
-                setCloudStatus('offline', '未配置');
-            }
+                loadConfig();
+                loadSyncMeta();
+                loadCategoryOptions();
+                loadDictationOptions();
+                loadWorkingCopy();
+                updateLastSyncDisplay();
+                updateBackToTopVisibility();
+
+                if (isConfigValid()) {
+                    ensureSyncTarget();
+                    syncToCloud(false, false);
+                } else {
+                    setCloudStatus('offline', '未配置');
+                }
+            })();
         })();
     </script>
 </body>
