@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
-    <meta name="app-build" content="2026-09-17-books-zero-webstorage-v1">
+    <meta name="app-build" content="2026-09-22-books-html-backup-v1">
     <title>Books</title>
     <style>
         * {
@@ -1587,7 +1587,7 @@
                 <button class="btn-outline" id="configBtn">配置</button>
                 <button class="btn-outline" id="exportBtn">导出</button>
                 <button class="btn-outline" id="importBtn">导入</button>
-                <input type="file" id="fileInput" accept=".json" style="display: none;">
+                <input type="file" id="fileInput" accept=".html,.htm,.json,text/html,application/json" style="display: none;">
             </div>
             <div class="right-group">
                 <span style="font-size:0.8rem;color:#94a3b8;" id="lastSyncTime">未同步</span>
@@ -1808,7 +1808,10 @@
             const WORK_OPFS_FILE = `books_${PAGE_INSTANCE_ID}_working_v2.json`;
             const MAX_CONFLICT_BACKUPS = 10;
             const MAX_SYNC_BYTES = 750 * 1024;
+            const MAX_IMPORT_BYTES = 4 * 1024 * 1024;
             const AUTO_SYNC_DELAY = 700;
+            const HTML_BACKUP_SCHEMA = 'books-html-backup-v1';
+            const HTML_BACKUP_PAYLOAD_ID = 'booksHtmlBackupPayload';
 
             let books = [];
             let categoryValues = [];
@@ -3776,10 +3779,187 @@
             }
 
             // ---------- 导出与导入 ----------
-            function downloadJson(data, filename) {
-                const blob = new Blob([JSON.stringify(data, null, 2)], {
-                    type: 'application/json;charset=utf-8'
-                });
+            function getHtmlBackupSiteName() {
+                const raw = String(document.title || 'book').normalize('NFKC').trim();
+                const compact = raw
+                    .replace(/\s+/g, '')
+                    .replace(/[^\p{L}\p{N}_-]+/gu, '')
+                    .toLocaleLowerCase('en');
+                return compact || 'book';
+            }
+
+            function getTenDigitUnixTimestamp() {
+                return String(Math.floor(Date.now() / 1000)).slice(-10).padStart(10, '0');
+            }
+
+            function serializeHtmlBackupPayload(payload) {
+                // 避免用户数据中的 HTML 片段干扰 application/json script 节点。
+                return JSON.stringify(payload)
+                    .replace(/</g, '\\u003c')
+                    .replace(/>/g, '\\u003e')
+                    .replace(/&/g, '\\u0026');
+            }
+
+            function getSafeConfigBackup() {
+                return {
+                    owner: String(config.owner || ''),
+                    repo: String(config.repo || ''),
+                    file: String(config.file || 'books_data.json')
+                };
+            }
+
+            function createHtmlBackupPayload() {
+                const unixTime = Math.floor(Date.now() / 1000);
+                return {
+                    schema: HTML_BACKUP_SCHEMA,
+                    schemaVersion: 1,
+                    siteName: getHtmlBackupSiteName(),
+                    exportedAt: new Date(unixTime * 1000).toISOString(),
+                    unixTime,
+                    appBuild: document.querySelector('meta[name="app-build"]')?.content || '',
+                    data: {
+                        books: normalizeBookList(books),
+                        categoryOptions: {
+                            values: uniqueCategoryValues(categoryValues),
+                            excluded: [...excludedCategoryKeys]
+                        },
+                        dictationOptions: {
+                            values: sortDictationValues(dictationValues),
+                            excluded: [...excludedDictationKeys]
+                        },
+                        config: getSafeConfigBackup(),
+                        conflictBackups: loadConflictBackups()
+                    }
+                };
+            }
+
+            function normalizeHtmlBackupPayload(payload) {
+                if (!payload || typeof payload !== 'object') {
+                    throw new Error('HTML 备份载荷不存在或已损坏');
+                }
+                if (payload.schema !== HTML_BACKUP_SCHEMA || !payload.data || typeof payload.data !== 'object') {
+                    throw new Error('不是当前网站可识别的 HTML 备份');
+                }
+                if (!Array.isArray(payload.data.books)) {
+                    throw new Error('HTML 备份中的图书数据无效');
+                }
+
+                const categoryOptions = payload.data.categoryOptions && typeof payload.data.categoryOptions === 'object'
+                    ? payload.data.categoryOptions
+                    : {};
+                const dictationOptions = payload.data.dictationOptions && typeof payload.data.dictationOptions === 'object'
+                    ? payload.data.dictationOptions
+                    : {};
+                const safeConfig = payload.data.config && typeof payload.data.config === 'object'
+                    ? payload.data.config
+                    : {};
+                const conflictBackups = Array.isArray(payload.data.conflictBackups)
+                    ? payload.data.conflictBackups
+                    : [];
+
+                return {
+                    books: normalizeBookList(payload.data.books),
+                    categoryOptions: {
+                        values: uniqueCategoryValues(Array.isArray(categoryOptions.values) ? categoryOptions.values : []),
+                        excluded: (Array.isArray(categoryOptions.excluded) ? categoryOptions.excluded : [])
+                            .map(categoryKey)
+                            .filter(Boolean)
+                    },
+                    dictationOptions: {
+                        values: sortDictationValues(Array.isArray(dictationOptions.values) ? dictationOptions.values : []),
+                        excluded: (Array.isArray(dictationOptions.excluded) ? dictationOptions.excluded : [])
+                            .map(dictationKey)
+                            .filter(Boolean)
+                    },
+                    config: {
+                        owner: typeof safeConfig.owner === 'string' ? safeConfig.owner : '',
+                        repo: typeof safeConfig.repo === 'string' ? safeConfig.repo : '',
+                        file: typeof safeConfig.file === 'string' && safeConfig.file.trim()
+                            ? safeConfig.file.trim()
+                            : 'books_data.json'
+                    },
+                    conflictBackups: conflictBackups
+                        .filter(item => item && Array.isArray(item.books))
+                        .map(item => ({
+                            createdAt: item.createdAt || new Date().toISOString(),
+                            source: item.source || 'html_backup',
+                            target: typeof item.target === 'string' ? item.target : '',
+                            books: normalizeBookList(item.books)
+                        }))
+                        .slice(-MAX_CONFLICT_BACKUPS)
+                };
+            }
+
+            function getEmbeddedHtmlBackupPayload(sourceDocument = document) {
+                const node = sourceDocument.getElementById(HTML_BACKUP_PAYLOAD_ID);
+                if (!node) return null;
+                const raw = String(node.textContent || '').trim();
+                if (!raw) return null;
+                return JSON.parse(raw);
+            }
+
+            function parseImportedBackup(text, file) {
+                const content = String(text || '');
+                const looksLikeHtml = /\.html?$/i.test(file?.name || '') || /^\s*<!doctype\s+html/i.test(content) || /^\s*<html[\s>]/i.test(content);
+
+                if (looksLikeHtml) {
+                    const parsedDocument = new DOMParser().parseFromString(content, 'text/html');
+                    const payload = getEmbeddedHtmlBackupPayload(parsedDocument);
+                    if (!payload) {
+                        throw new Error('HTML 文件中未找到可恢复的 Books 备份数据');
+                    }
+                    return {
+                        type: 'html',
+                        state: normalizeHtmlBackupPayload(payload)
+                    };
+                }
+
+                // 兼容旧版本导出的 JSON 数组。
+                const imported = JSON.parse(content);
+                if (!Array.isArray(imported)) {
+                    throw new Error('JSON 文件格式错误：根节点必须是数组');
+                }
+                return {
+                    type: 'json',
+                    state: {
+                        books: normalizeBookList(imported),
+                        categoryOptions: null,
+                        dictationOptions: null,
+                        config: null,
+                        conflictBackups: null
+                    },
+                    originalLength: imported.length
+                };
+            }
+
+            function buildExportHtml(payload) {
+                const clone = document.documentElement.cloneNode(true);
+                clone.querySelector(`#${HTML_BACKUP_PAYLOAD_ID}`)?.remove();
+
+                // Token 不进入导出文件；导出文件即使被转发，也不会携带 GitHub 凭据。
+                const tokenField = clone.querySelector('#cfgToken');
+                if (tokenField) tokenField.setAttribute('value', '');
+
+                const fileField = clone.querySelector('#fileInput');
+                if (fileField) fileField.setAttribute('value', '');
+
+                const payloadNode = document.createElement('script');
+                payloadNode.id = HTML_BACKUP_PAYLOAD_ID;
+                payloadNode.type = 'application/json';
+                payloadNode.textContent = serializeHtmlBackupPayload(payload);
+
+                const firstScript = clone.querySelector('script');
+                if (firstScript?.parentNode) {
+                    firstScript.parentNode.insertBefore(payloadNode, firstScript);
+                } else {
+                    clone.querySelector('body')?.appendChild(payloadNode);
+                }
+
+                return '<!DOCTYPE html>\n' + clone.outerHTML;
+            }
+
+            function downloadTextFile(text, filename, type) {
+                const blob = new Blob([text], { type });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -3791,36 +3971,148 @@
             }
 
             function exportData() {
-                if (books.length === 0) {
-                    alert('图书列表为空，没有可导出的数据。');
-                    return;
+                const payload = createHtmlBackupPayload();
+                const html = buildExportHtml(payload);
+                const filename = `${payload.siteName}${getTenDigitUnixTimestamp()}.html`;
+                downloadTextFile(html, filename, 'text/html;charset=utf-8');
+                showToast(`HTML 备份已导出：${filename}`, 'success');
+            }
+
+            function applyImportedState(state, { restoreConfig = true } = {}) {
+                const normalizedBooks = normalizeBookList(state.books || []);
+                assertSnapshotSyncSize(normalizedBooks);
+
+                books = normalizedBooks;
+
+                if (state.categoryOptions) {
+                    categoryValues = uniqueCategoryValues(state.categoryOptions.values || []);
+                    excludedCategoryKeys = new Set(
+                        (state.categoryOptions.excluded || []).map(categoryKey).filter(Boolean)
+                    );
+                    categoryValues = categoryValues.filter(
+                        value => !excludedCategoryKeys.has(categoryKey(value))
+                    );
+                    saveCategoryOptions();
+                } else {
+                    categoryValues = [];
+                    excludedCategoryKeys = new Set();
                 }
-                downloadJson(books, `books_backup_${new Date().toISOString().slice(0, 10)}.json`);
-                showToast('导出成功', 'success');
+
+                if (state.dictationOptions) {
+                    excludedDictationKeys = new Set(
+                        (state.dictationOptions.excluded || []).map(dictationKey).filter(Boolean)
+                    );
+                    dictationValues = sortDictationValues(state.dictationOptions.values || [])
+                        .filter(value => !excludedDictationKeys.has(dictationKey(value)));
+                    saveDictationOptions();
+                } else {
+                    dictationValues = [];
+                    excludedDictationKeys = new Set();
+                }
+
+                if (Array.isArray(state.conflictBackups)) {
+                    appSet(CONFLICT_BACKUP_KEY, JSON.stringify(state.conflictBackups.slice(-MAX_CONFLICT_BACKUPS)));
+                }
+
+                if (restoreConfig && state.config) {
+                    // 恢复非敏感同步目标，但清空 Token 与旧同步 SHA，避免恢复后误覆盖云端。
+                    config = {
+                        token: '',
+                        rememberToken: false,
+                        owner: state.config.owner || '',
+                        repo: state.config.repo || '',
+                        file: state.config.file || 'books_data.json'
+                    };
+                    appDelete(TOKEN_KEY);
+                    appSet(CONFIG_KEY, JSON.stringify({
+                        rememberToken: false,
+                        owner: config.owner,
+                        repo: config.repo,
+                        file: config.file
+                    }));
+                    cfgToken.value = '';
+                    cfgRememberToken.checked = false;
+                    cfgOwner.value = config.owner;
+                    cfgRepo.value = config.repo;
+                    cfgFile.value = config.file;
+                }
+
+                syncMeta = createEmptySyncMeta(getSyncTarget());
+                saveSyncMeta();
+                applySortAndRender();
+                setCloudStatus('offline', isConfigValid() ? '待同步' : '未配置');
+                updateLastSyncDisplay();
+            }
+
+            async function seedFromEmbeddedHtmlBackup() {
+                // 只在当前页面实例还没有本机工作副本时使用内嵌备份，避免每次刷新覆盖后续修改。
+                if (appGet(STORAGE_KEY) !== null) return false;
+
+                let payload = null;
+                try {
+                    payload = getEmbeddedHtmlBackupPayload(document);
+                } catch (error) {
+                    console.error('内嵌 HTML 备份解析失败:', error);
+                    return false;
+                }
+                if (!payload) return false;
+
+                try {
+                    const state = normalizeHtmlBackupPayload(payload);
+                    const categoryOptions = state.categoryOptions || { values: [], excluded: [] };
+                    const dictationOptions = state.dictationOptions || { values: [], excluded: [] };
+                    const safeConfig = state.config || { owner: '', repo: '', file: 'books_data.json' };
+
+                    appCache.set(STORAGE_KEY, JSON.stringify(state.books));
+                    appCache.set(CATEGORY_OPTIONS_KEY, JSON.stringify(categoryOptions));
+                    appCache.set(DICTATION_OPTIONS_KEY, JSON.stringify(dictationOptions));
+                    appCache.set(CONFIG_KEY, JSON.stringify({
+                        rememberToken: false,
+                        owner: safeConfig.owner || '',
+                        repo: safeConfig.repo || '',
+                        file: safeConfig.file || 'books_data.json'
+                    }));
+                    appCache.delete(TOKEN_KEY);
+                    appCache.set(SYNC_META_KEY, JSON.stringify(createEmptySyncMeta(
+                        safeConfig.owner && safeConfig.repo && safeConfig.file
+                            ? `${safeConfig.owner}/${safeConfig.repo}/${safeConfig.file}`
+                            : ''
+                    )));
+                    appCache.set(CONFLICT_BACKUP_KEY, JSON.stringify(state.conflictBackups || []));
+
+                    await Promise.allSettled([
+                        enqueueAppPut(STORAGE_KEY, appCache.get(STORAGE_KEY)),
+                        enqueueAppPut(CATEGORY_OPTIONS_KEY, appCache.get(CATEGORY_OPTIONS_KEY)),
+                        enqueueAppPut(DICTATION_OPTIONS_KEY, appCache.get(DICTATION_OPTIONS_KEY)),
+                        enqueueAppPut(CONFIG_KEY, appCache.get(CONFIG_KEY)),
+                        enqueueAppPut(SYNC_META_KEY, appCache.get(SYNC_META_KEY)),
+                        enqueueAppPut(CONFLICT_BACKUP_KEY, appCache.get(CONFLICT_BACKUP_KEY)),
+                        enqueueAppDelete(TOKEN_KEY),
+                        queueWorkingCopyOpfsWrite(state.books)
+                    ]);
+                    return true;
+                } catch (error) {
+                    console.error('内嵌 HTML 备份恢复失败:', error);
+                    return false;
+                }
             }
 
             function importData(file) {
-                if (!file || file.size > MAX_SYNC_BYTES) {
-                    alert('请选择不超过 750 KB 的 JSON 文件。');
+                if (!file || file.size > MAX_IMPORT_BYTES) {
+                    alert('请选择不超过 4 MB 的 HTML 备份或旧版 JSON 文件。');
                     return;
                 }
 
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     try {
-                        const imported = JSON.parse(event.target.result);
-                        if (!Array.isArray(imported)) {
-                            alert('文件格式错误：根节点必须是数组。');
-                            return;
-                        }
-
-                        const valid = normalizeBookList(imported);
-                        if (valid.length === 0 && imported.length > 0) {
+                        const parsed = parseImportedBackup(event.target.result, file);
+                        const valid = parsed.state.books;
+                        if (valid.length === 0 && parsed.originalLength > 0) {
                             alert('文件中没有找到有效的图书数据。');
                             return;
                         }
 
-                        assertSnapshotSyncSize(valid);
                         if (
                             books.length > 0 &&
                             !confirm(`当前有 ${books.length} 个条目，导入将完全替换当前列表。确定继续吗？`)
@@ -3828,10 +4120,13 @@
                             return;
                         }
 
-                        books = valid;
-                        applySortAndRender();
-                        markLocalChange();
-                        showToast(`成功导入 ${books.length} 个条目`, 'success');
+                        applyImportedState(parsed.state, { restoreConfig: parsed.type === 'html' });
+                        showToast(
+                            parsed.type === 'html'
+                                ? `HTML 备份恢复成功，共 ${books.length} 个条目`
+                                : `旧版 JSON 导入成功，共 ${books.length} 个条目`,
+                            'success'
+                        );
                     } catch (error) {
                         alert(`解析文件失败：${error.message}`);
                     }
@@ -4108,6 +4403,7 @@
                     showToast(`本机持久化初始化失败：${error.message}`, 'error');
                 }
 
+                await seedFromEmbeddedHtmlBackup();
                 loadConfig();
                 loadSyncMeta();
                 loadCategoryOptions();
